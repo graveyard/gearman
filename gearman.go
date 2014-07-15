@@ -20,11 +20,25 @@ type gearmanPacket struct {
 	arguments  [][]byte
 }
 
-func (packet *gearmanPacket) Bytes() []byte {
+func (packet *gearmanPacket) Bytes() ([]byte, error) {
 	buf := bytes.NewBuffer(packet.code)
-	binary.Write(buf, binary.BigEndian, packetType)
-	// TODO: write size, convert arguments
-	return nil
+	if err := binary.Write(buf, binary.BigEndian, packetType); err != nil {
+		return nil, err
+	}
+	size := len(arguments) - 1 // One for each null-byte separator
+	for _, argument := range arguments {
+		size += len(argument)
+	}
+	if err := binary.Write(buf, binary.BigEndian, size); err != nil {
+		return nil, err
+	}
+	// Need special handling for last argument (don't write null byte)
+	for _, argument := range arguments[0 : len(arguments)-1] {
+		buffer.Write(argument)
+		buffer.Write([]byte{0})
+	}
+	buffer.Write(arguments[len(arguments)-1])
+	return buffer.Bytes(), nil
 }
 
 func newPacket(data []byte) (*gearmanPacket, error) {
