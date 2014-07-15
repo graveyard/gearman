@@ -73,13 +73,13 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	n, err := c.conn.Write(bytes)
-	if err != nil {
-		return nil, err
-	}
-	// TODO: handl when n is less than len(bytes)
-	if n != len(bytes) {
-		println("Didn't write all the bytes!")
+	written := 0
+	for written != len(data) {
+		n, err := c.conn.Write(bytes)
+		if err != nil {
+			return nil, err
+		}
+		written += n
 	}
 	handle := <-c.handles
 	return job.New(handle), nil
