@@ -2,11 +2,13 @@ package gearman
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"github.com/Clever/gearman/job"
 	"github.com/Clever/gearman/scanner"
 	"io"
 	"net"
+	"sync"
 )
 
 type Client interface {
@@ -22,34 +24,39 @@ type gearmanPacket struct {
 
 func (packet *gearmanPacket) Bytes() ([]byte, error) {
 	buf := bytes.NewBuffer(packet.code)
-	if err := binary.Write(buf, binary.BigEndian, packetType); err != nil {
+	if err := binary.Write(buf, binary.BigEndian, packet.packetType); err != nil {
 		return nil, err
 	}
-	size := len(arguments) - 1 // One for each null-byte separator
-	for _, argument := range arguments {
+	size := len(packet.arguments) - 1 // One for each null-byte separator
+	for _, argument := range packet.arguments {
 		size += len(argument)
 	}
 	if err := binary.Write(buf, binary.BigEndian, size); err != nil {
 		return nil, err
 	}
 	// Need special handling for last argument (don't write null byte)
-	for _, argument := range arguments[0 : len(arguments)-1] {
-		buffer.Write(argument)
-		buffer.Write([]byte{0})
+	for _, argument := range packet.arguments[0 : len(packet.arguments)-1] {
+		buf.Write(argument)
+		buf.Write([]byte{0})
 	}
-	buffer.Write(arguments[len(arguments)-1])
-	return buffer.Bytes(), nil
+	buf.Write(packet.arguments[len(packet.arguments)-1])
+	return buf.Bytes(), nil
 }
 
 func newPacket(data []byte) (*gearmanPacket, error) {
-	// TODO: parse bytes into packet
-	return nil, nil
+	packetType := 0
+	if err := binary.Read(bytes.NewBuffer(data[4:8]), binary.BigEndian, &packetType); err != nil {
+		return nil, err
+	}
+	arguments := bytes.Split(data[12:len(data)], []byte{0})
+	return &gearmanPacket{code: data[0:4], packetType: packetType, arguments: arguments}, nil
 }
 
 type client struct {
 	conn    io.WriteCloser
 	packets chan *gearmanPacket
 	jobs    map[string]job.Job
+	handles chan string
 }
 
 func (c *client) Close() error {
@@ -60,7 +67,7 @@ func (c *client) Close() error {
 
 func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	code := []byte{0}
-	code = append(code, []byte("REQ"))
+	code = append(code, []byte("REQ")...)
 	packet := gearmanPacket{code: code, packetType: 7}
 	bytes, err := packet.Bytes()
 	if err != nil {
@@ -71,8 +78,18 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO: wait until we get a JOB_CREATED event to get the handle, then return the job
-	return nil, nil
+	if n != len(bytes) {
+		println("Didn't write all the bytes!")
+	}
+	handle := ""
+	wait := sync.Mutex{}
+	wait.Lock()
+	go func() {
+		defer wait.Unlock()
+		handle = <-c.handles
+	}()
+	wait.Lock()
+	return job.New(handle), nil
 }
 
 func (c *client) read(scanner *bufio.Scanner) {
@@ -97,16 +114,17 @@ func (c *client) handlePackets() {
 func NewClient(network, addr string) (Client, error) {
 	conn, err := net.Dial(network, addr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	c := &client{
 		conn:    conn,
 		packets: make(chan *gearmanPacket),
+		handles: make(chan string),
 	}
-	go read(scanner.New(conn))
+	go c.read(scanner.New(conn))
 
 	for i := 0; i < 100; i++ {
-		go handlePackets()
+		go c.handlePackets()
 	}
 
 	return c, nil

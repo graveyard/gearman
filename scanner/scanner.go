@@ -2,6 +2,9 @@ package scanner
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/binary"
+	"io"
 )
 
 func needMoreData() (int, []byte, error) { return 0, nil, nil }
@@ -16,7 +19,7 @@ func New(r io.Reader) *bufio.Scanner {
 		}
 
 		var size int32
-		if err := binary.Read(bytes.NewBuffer(data[8:4]), binary.BigEndian, &size); err != nil {
+		if err := binary.Read(bytes.NewBuffer(data[4:8]), binary.BigEndian, &size); err != nil {
 			return 0, nil, err
 		}
 

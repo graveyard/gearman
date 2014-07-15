@@ -52,7 +52,7 @@ func (j *job) SetState(state stateType) {
 	j.state = state
 }
 
-func New(string handle) Job {
+func New(handle string) Job {
 	j := &job{handle: handle}
 	j.data = make(chan []byte)
 	j.warnings = make(chan []byte)
