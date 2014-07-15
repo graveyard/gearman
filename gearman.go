@@ -2,6 +2,7 @@ package gearman
 
 import (
 	"bufio"
+	"encoding/binary"
 	"github.com/Clever/gearman/job"
 	"github.com/Clever/gearman/scanner"
 	"io"
@@ -20,12 +21,14 @@ type gearmanPacket struct {
 }
 
 func (packet *gearmanPacket) Bytes() []byte {
-	// TODO
+	buf := bytes.NewBuffer(packet.code)
+	binary.Write(buf, binary.BigEndian, packetType)
+	// TODO: write size, convert arguments
 	return nil
 }
 
 func newPacket(data []byte) (*gearmanPacket, error) {
-	// TODO
+	// TODO: parse bytes into packet
 	return nil, nil
 }
 
@@ -36,12 +39,14 @@ type client struct {
 }
 
 func (c *client) Close() error {
-	// TODO
+	// TODO: close connection, figure out when to close packet chan
 	return nil
 }
 
 func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	// TODO
+	// create a gearmanPacket, send it
+	// wait until we get a JOB_CREATED event to get the handle, then return
 	return nil, nil
 }
 
@@ -60,7 +65,7 @@ func (c *client) read(scanner *bufio.Scanner) {
 
 func (c *client) handlePackets() {
 	for packet := range c.packets {
-		// Basically a switch on packet type, and then do something based on the data
+		// Basically a switch on packet type, and then do something based on the arguments
 	}
 }
 
