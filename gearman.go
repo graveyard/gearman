@@ -53,7 +53,8 @@ type client struct {
 }
 
 func (c *client) Close() error {
-	// TODO: close connection, figure out when to close packet chan
+	c.conn.Close()
+	// TODO: figure out when to close packet chan
 	return nil
 }
 
@@ -62,10 +63,13 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	code = append(code, []byte("REQ"))
 	packet := gearmanPacket{code: code, packetType: 7}
 	bytes, err := packet.Bytes()
+	if err != nil {
+		return nil, err
+	}
 	n, err := c.conn.Write(bytes)
 	// TODO: handl when n is less than len(bytes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// TODO: wait until we get a JOB_CREATED event to get the handle, then return the job
 	return nil, nil
