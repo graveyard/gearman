@@ -13,7 +13,16 @@ type Client interface {
 	Submit(fn string, data []byte) (job.Job, error)
 }
 
-type gearmanPacket struct{}
+type gearmanPacket struct {
+	code       []byte
+	packetType int
+	arguments  [][]byte
+}
+
+func (packet *gearmanPacket) Bytes() []byte {
+	// TODO
+	return nil
+}
 
 func newPacket(data []byte) (*gearmanPacket, error) {
 	// TODO
@@ -51,7 +60,7 @@ func (c *client) read(scanner *bufio.Scanner) {
 
 func (c *client) handlePackets() {
 	for packet := range c.packets {
-		// Basically a giant switch on packet type, and then do something based on the handle
+		// Basically a switch on packet type, and then do something based on the data
 	}
 }
 
