@@ -62,6 +62,7 @@ type client struct {
 	packets chan *gearmanPacket
 	jobs    map[string]job.Job
 	handles chan string
+	jobLock sync.RWMutex
 }
 
 func (c *client) Close() error {
@@ -88,6 +89,24 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	}
 	handle := <-c.handles
 	return job.New(handle), nil
+}
+
+func (c *client) addJob(j job.Job) {
+	c.jobLock.Lock()
+	defer c.jobLock.Unlock()
+	c.jobs[job.Handle()] = j
+}
+
+func (c *client) getJob(handle string) job.Job {
+	c.jobLock.RLock()
+	defer c.jobLock.RUnlock()
+	return c.jobs[handle]
+}
+
+func (c *client) deleteJob(handle string) job.Job {
+	c.jobLock.Lock()
+	defer c.jobLock.Unlock()
+	delete(c.jobs, job.Handle())
 }
 
 func (c *client) read(scanner *bufio.Scanner) {
