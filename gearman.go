@@ -43,6 +43,11 @@ func (packet *gearmanPacket) Bytes() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// Handle assumes that the first argument of the packet is the job handle
+func (packet *gearmanPacket) Handle() string {
+	return string(packet.arguments[0])
+}
+
 func newPacket(data []byte) (*gearmanPacket, error) {
 	packetType := 0
 	if err := binary.Read(bytes.NewBuffer(data[4:8]), binary.BigEndian, &packetType); err != nil {
