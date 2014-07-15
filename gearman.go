@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/Clever/gearman/job"
+	"github.com/Clever/gearman/packet"
 	"github.com/Clever/gearman/scanner"
 	"io"
 	"net"
@@ -19,7 +20,7 @@ type Client interface {
 
 type client struct {
 	conn    io.WriteCloser
-	packets chan *gearmanPacket
+	packets chan *packet.Packet
 	jobs    map[string]job.Job
 	handles chan string
 	jobLock sync.RWMutex
@@ -34,8 +35,8 @@ func (c *client) Close() error {
 func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	code := []byte{0}
 	code = append(code, []byte("REQ")...)
-	packet := gearmanPacket{code: code, packetType: 7, arguments: [][]byte{[]byte(fn), []byte{}, data}}
-	bytes, err := packet.Bytes()
+	pack := &packet.Packet{Code: code, Type: 7, Arguments: [][]byte{[]byte(fn), []byte{}, data}}
+	bytes, err := pack.Bytes()
 	if err != nil {
 		return nil, err
 	}
@@ -71,11 +72,11 @@ func (c *client) deleteJob(handle string) {
 
 func (c *client) read(scanner *bufio.Scanner) {
 	for scanner.Scan() {
-		packet, err := newPacket(scanner.Bytes())
+		pack, err := packet.New(scanner.Bytes())
 		if err != nil {
 			fmt.Printf("ERROR PARSING PACKET! %#v\n", err)
 		} else {
-			c.packets <- packet
+			c.packets <- pack
 		}
 	}
 	if scanner.Err() != nil {
@@ -84,36 +85,36 @@ func (c *client) read(scanner *bufio.Scanner) {
 }
 
 func (c *client) handlePackets() {
-	for packet := range c.packets {
-		switch packet.packetType {
-		case JobCreated:
-			c.handles <- packet.Handle()
-		case WorkStatus:
-			j := c.getJob(packet.Handle())
-			if err := binary.Read(bytes.NewBuffer(packet.arguments[1]), binary.BigEndian, &j.Status().Numerator); err != nil {
+	for pack := range c.packets {
+		switch pack.Type {
+		case packet.JobCreated:
+			c.handles <- pack.Handle()
+		case packet.WorkStatus:
+			j := c.getJob(pack.Handle())
+			if err := binary.Read(bytes.NewBuffer(pack.Arguments[1]), binary.BigEndian, &j.Status().Numerator); err != nil {
 				fmt.Println("Error decoding numerator", err)
 			}
-			if err := binary.Read(bytes.NewBuffer(packet.arguments[2]), binary.BigEndian, &j.Status().Denominator); err != nil {
+			if err := binary.Read(bytes.NewBuffer(pack.Arguments[2]), binary.BigEndian, &j.Status().Denominator); err != nil {
 				fmt.Println("Error decoding denominator", err)
 			}
-		case WorkComplete:
-			j := c.getJob(packet.Handle())
+		case packet.WorkComplete:
+			j := c.getJob(pack.Handle())
 			j.SetState(job.State.Completed)
 			close(j.Data())
 			close(j.Warnings())
-		case WorkFail:
-			j := c.getJob(packet.Handle())
+		case packet.WorkFail:
+			j := c.getJob(pack.Handle())
 			j.SetState(job.State.Failed)
 			close(j.Data())
 			close(j.Warnings())
-		case WorkData:
-			j := c.getJob(packet.Handle())
-			j.Data() <- packet.arguments[1]
-		case WorkWarning:
-			j := c.getJob(packet.Handle())
-			j.Warnings() <- packet.arguments[1]
+		case packet.WorkData:
+			j := c.getJob(pack.Handle())
+			j.Data() <- pack.Arguments[1]
+		case packet.WorkWarning:
+			j := c.getJob(pack.Handle())
+			j.Warnings() <- pack.Arguments[1]
 		default:
-			fmt.Println("WARNING: Unimplemented packet type", packet.packetType)
+			fmt.Println("WARNING: Unimplemented packet type", pack.Type)
 		}
 	}
 }
@@ -125,7 +126,7 @@ func NewClient(network, addr string) (Client, error) {
 	}
 	c := &client{
 		conn:    conn,
-		packets: make(chan *gearmanPacket),
+		packets: make(chan *packet.Packet),
 		handles: make(chan string),
 	}
 	go c.read(scanner.New(conn))

@@ -1,4 +1,4 @@
-package gearman
+package packet
 
 const (
 	CanDo           = 1 // Unused
