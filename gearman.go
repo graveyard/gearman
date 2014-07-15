@@ -126,19 +126,23 @@ func (c *client) handlePackets() {
 	for packet := range c.packets {
 		switch packet.packetType {
 		case JobCreated:
-			// Parse out handle and push it onto handles
+			c.handles <- packet.Handle()
 		case WorkStatus:
-			// Parse out handle and update the appropriate job
+			j := c.getJob(packet.Handle())
 		case WorkComplete:
-			// Parse out handle and update the appropriate job
+			j := c.getJob(packet.Handle())
+			j.SetState(job.State.Completed)
 		case WorkFail:
-			// Parse out handle and update the appropriate job
+			j := c.getJob(packet.Handle())
+			j.SetState(job.State.Failed)
 		case WorkData:
-			// Parse out handle and update the appropriate job
+			j := c.getJob(packet.Handle())
+			j.Data() <- packet.arguments[1]
 		case WorkWarning:
-			// Parse out handle and update the appropriate job
+			j := c.getJob(packet.Handle())
+			j.Warnings() <- packet.arguments[1]
 		default:
-			println("WARNING: Unimplmeneted packet type", packet.packetType)
+			println("WARNING: Unimplemented packet type", packet.packetType)
 		}
 	}
 }
