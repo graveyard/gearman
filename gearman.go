@@ -107,6 +107,7 @@ func (c *client) read(scanner *bufio.Scanner) {
 
 func (c *client) handlePackets() {
 	for packet := range c.packets {
+		// TODO
 		// Basically a switch on packet type, and then do something based on the arguments
 	}
 }
