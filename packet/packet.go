@@ -20,6 +20,9 @@ func (packet *Packet) Bytes() ([]byte, error) {
 	for _, argument := range packet.Arguments {
 		size += len(argument)
 	}
+	if size < 0 {
+		size = 0
+	}
 	if err := binary.Write(buf, binary.BigEndian, int32(size)); err != nil {
 		return nil, err
 	}
@@ -44,6 +47,9 @@ func New(data []byte) (*Packet, error) {
 	if err := binary.Read(bytes.NewBuffer(data[4:8]), binary.BigEndian, &packetType); err != nil {
 		return nil, err
 	}
-	arguments := bytes.Split(data[12:len(data)], []byte{0})
+	arguments := [][]byte{}
+	if len(data) > 12 {
+		arguments = bytes.Split(data[12:len(data)], []byte{0})
+	}
 	return &Packet{Code: data[0:4], Type: int(packetType), Arguments: arguments}, nil
 }

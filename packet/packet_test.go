@@ -10,6 +10,10 @@ var confs = []map[string]interface{}{
 		"pack":  Packet{Code: []byte{0, 1, 2, 3}, Type: 3, Arguments: [][]byte{{4}, {5}, {6}}},
 		"bytes": []byte{0, 1, 2, 3, 0, 0, 0, 3, 0, 0, 0, 5, 4, 0, 5, 0, 6},
 	},
+	{
+		"pack":  Packet{Code: []byte{0, 1, 2, 3}, Type: 3, Arguments: [][]byte{}},
+		"bytes": []byte{0, 1, 2, 3, 0, 0, 0, 3, 0, 0, 0, 0},
+	},
 }
 
 func TestBytes(t *testing.T) {
