@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"github.com/Clever/gearman/job"
 	"github.com/Clever/gearman/scanner"
 	"io"
@@ -24,22 +25,24 @@ type gearmanPacket struct {
 
 func (packet *gearmanPacket) Bytes() ([]byte, error) {
 	buf := bytes.NewBuffer(packet.code)
-	if err := binary.Write(buf, binary.BigEndian, packet.packetType); err != nil {
+	if err := binary.Write(buf, binary.BigEndian, int32(packet.packetType)); err != nil {
 		return nil, err
 	}
 	size := len(packet.arguments) - 1 // One for each null-byte separator
 	for _, argument := range packet.arguments {
 		size += len(argument)
 	}
-	if err := binary.Write(buf, binary.BigEndian, size); err != nil {
+	if err := binary.Write(buf, binary.BigEndian, int32(size)); err != nil {
 		return nil, err
 	}
-	// Need special handling for last argument (don't write null byte)
-	for _, argument := range packet.arguments[0 : len(packet.arguments)-1] {
-		buf.Write(argument)
-		buf.Write([]byte{0})
+	if len(packet.arguments) > 0 {
+		// Need special handling for last argument (don't write null byte)
+		for _, argument := range packet.arguments[0 : len(packet.arguments)-1] {
+			buf.Write(argument)
+			buf.Write([]byte{0})
+		}
+		buf.Write(packet.arguments[len(packet.arguments)-1])
 	}
-	buf.Write(packet.arguments[len(packet.arguments)-1])
 	return buf.Bytes(), nil
 }
 
@@ -49,12 +52,12 @@ func (packet *gearmanPacket) Handle() string {
 }
 
 func newPacket(data []byte) (*gearmanPacket, error) {
-	packetType := 0
+	packetType := int32(0)
 	if err := binary.Read(bytes.NewBuffer(data[4:8]), binary.BigEndian, &packetType); err != nil {
 		return nil, err
 	}
 	arguments := bytes.Split(data[12:len(data)], []byte{0})
-	return &gearmanPacket{code: data[0:4], packetType: packetType, arguments: arguments}, nil
+	return &gearmanPacket{code: data[0:4], packetType: int(packetType), arguments: arguments}, nil
 }
 
 type client struct {
@@ -74,14 +77,14 @@ func (c *client) Close() error {
 func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	code := []byte{0}
 	code = append(code, []byte("REQ")...)
-	packet := gearmanPacket{code: code, packetType: 7}
+	packet := gearmanPacket{code: code, packetType: 7, arguments: [][]byte{[]byte(fn), []byte{}, data}}
 	bytes, err := packet.Bytes()
 	if err != nil {
 		return nil, err
 	}
 	written := 0
-	for written != len(data) {
-		n, err := c.conn.Write(bytes)
+	for written != len(bytes) {
+		n, err := c.conn.Write(bytes[written:len(bytes)])
 		if err != nil {
 			return nil, err
 		}
@@ -94,7 +97,7 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 func (c *client) addJob(j job.Job) {
 	c.jobLock.Lock()
 	defer c.jobLock.Unlock()
-	c.jobs[job.Handle()] = j
+	c.jobs[j.Handle()] = j
 }
 
 func (c *client) getJob(handle string) job.Job {
@@ -103,22 +106,23 @@ func (c *client) getJob(handle string) job.Job {
 	return c.jobs[handle]
 }
 
-func (c *client) deleteJob(handle string) job.Job {
+func (c *client) deleteJob(handle string) {
 	c.jobLock.Lock()
 	defer c.jobLock.Unlock()
-	delete(c.jobs, job.Handle())
+	delete(c.jobs, handle)
 }
 
 func (c *client) read(scanner *bufio.Scanner) {
 	for scanner.Scan() {
 		packet, err := newPacket(scanner.Bytes())
 		if err != nil {
-			println("ERROR PARSING PACKET!")
+			fmt.Printf("ERROR PARSING PACKET! %#v\n", err)
+		} else {
+			c.packets <- packet
 		}
-		c.packets <- packet
 	}
 	if scanner.Err() != nil {
-		println("ERROR SCANNING!")
+		fmt.Printf("ERROR SCANNING! %#v\n", scanner.Err())
 	}
 }
 
@@ -129,6 +133,7 @@ func (c *client) handlePackets() {
 			c.handles <- packet.Handle()
 		case WorkStatus:
 			j := c.getJob(packet.Handle())
+			_ = j
 		case WorkComplete:
 			j := c.getJob(packet.Handle())
 			j.SetState(job.State.Completed)
@@ -142,7 +147,7 @@ func (c *client) handlePackets() {
 			j := c.getJob(packet.Handle())
 			j.Warnings() <- packet.arguments[1]
 		default:
-			println("WARNING: Unimplemented packet type", packet.packetType)
+			fmt.Println("WARNING: Unimplemented packet type", packet.packetType)
 		}
 	}
 }
