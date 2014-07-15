@@ -58,9 +58,16 @@ func (c *client) Close() error {
 }
 
 func (c *client) Submit(fn string, data []byte) (job.Job, error) {
-	// TODO
-	// create a gearmanPacket, send it
-	// wait until we get a JOB_CREATED event to get the handle, then return
+	code := []byte{0}
+	code = append(code, []byte("REQ"))
+	packet := gearmanPacket{code: code, packetType: 7}
+	bytes, err := packet.Bytes()
+	n, err := c.conn.Write(bytes)
+	// TODO: handl when n is less than len(bytes)
+	if err != nil {
+		return err
+	}
+	// TODO: wait until we get a JOB_CREATED event to get the handle, then return the job
 	return nil, nil
 }
 
