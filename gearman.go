@@ -81,14 +81,7 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	if n != len(bytes) {
 		println("Didn't write all the bytes!")
 	}
-	handle := ""
-	wait := sync.Mutex{}
-	wait.Lock()
-	go func() {
-		defer wait.Unlock()
-		handle = <-c.handles
-	}()
-	wait.Lock()
+	handle := <-c.handles
 	return job.New(handle), nil
 }
 
