@@ -102,11 +102,13 @@ func (c *client) handlePackets() {
 			j.SetState(job.State.Completed)
 			close(j.Data())
 			close(j.Warnings())
+			c.deleteJob(pack.Handle())
 		case packet.WorkFail:
 			j := c.getJob(pack.Handle())
 			j.SetState(job.State.Failed)
 			close(j.Data())
 			close(j.Warnings())
+			c.deleteJob(pack.Handle())
 		case packet.WorkData:
 			j := c.getJob(pack.Handle())
 			j.Data() <- pack.Arguments[1]
