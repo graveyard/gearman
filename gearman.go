@@ -100,8 +100,22 @@ func (c *client) read(scanner *bufio.Scanner) {
 
 func (c *client) handlePackets() {
 	for packet := range c.packets {
-		// TODO
-		// Basically a switch on packet type, and then do something based on the arguments
+		switch packet.packetType {
+		case JobCreated:
+			// Parse out handle and push it onto handles
+		case WorkStatus:
+			// Parse out handle and update the appropriate job
+		case WorkComplete:
+			// Parse out handle and update the appropriate job
+		case WorkFail:
+			// Parse out handle and update the appropriate job
+		case WorkData:
+			// Parse out handle and update the appropriate job
+		case WorkWarning:
+			// Parse out handle and update the appropriate job
+		default:
+			println("WARNING: Unimplmeneted packet type", packet.packetType)
+		}
 	}
 }
 
