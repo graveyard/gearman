@@ -10,13 +10,18 @@ type states struct {
 	Failed    stateType
 }
 
+type Status struct {
+	Numerator   int
+	Denominator int
+}
+
 var State = &states{stateType{0}, stateType{1}, stateType{2}}
 
 type Job interface {
 	Handle() string
 	Data() chan []byte
 	Warnings() chan []byte
-	Status() int
+	Status() *Status
 	State() stateType
 	SetState(stateType)
 }
@@ -24,7 +29,7 @@ type Job interface {
 type job struct {
 	handle         string
 	data, warnings chan []byte
-	status         int
+	status         *Status
 	state          stateType
 }
 
@@ -40,7 +45,7 @@ func (j *job) Warnings() chan []byte {
 	return j.warnings
 }
 
-func (j *job) Status() int {
+func (j *job) Status() *Status {
 	return j.status
 }
 
@@ -57,5 +62,6 @@ func New(handle string) Job {
 	j.data = make(chan []byte)
 	j.warnings = make(chan []byte)
 	j.state = State.Running
+	j.status = &Status{0, 0}
 	return j
 }

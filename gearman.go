@@ -133,13 +133,22 @@ func (c *client) handlePackets() {
 			c.handles <- packet.Handle()
 		case WorkStatus:
 			j := c.getJob(packet.Handle())
-			_ = j
+			if err := binary.Read(bytes.NewBuffer(packet.arguments[1]), binary.BigEndian, &j.Status().Numerator); err != nil {
+				fmt.Println("Error decoding numerator", err)
+			}
+			if err := binary.Read(bytes.NewBuffer(packet.arguments[2]), binary.BigEndian, &j.Status().Denominator); err != nil {
+				fmt.Println("Error decoding denominator", err)
+			}
 		case WorkComplete:
 			j := c.getJob(packet.Handle())
 			j.SetState(job.State.Completed)
+			close(j.Data())
+			close(j.Warnings())
 		case WorkFail:
 			j := c.getJob(packet.Handle())
 			j.SetState(job.State.Failed)
+			close(j.Data())
+			close(j.Warnings())
 		case WorkData:
 			j := c.getJob(packet.Handle())
 			j.Data() <- packet.arguments[1]
@@ -164,9 +173,7 @@ func NewClient(network, addr string) (Client, error) {
 	}
 	go c.read(scanner.New(conn))
 
-	for i := 0; i < 100; i++ {
-		go c.handlePackets()
-	}
+	go c.handlePackets()
 
 	return c, nil
 }
