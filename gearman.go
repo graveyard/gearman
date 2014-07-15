@@ -74,10 +74,10 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 		return nil, err
 	}
 	n, err := c.conn.Write(bytes)
-	// TODO: handl when n is less than len(bytes)
 	if err != nil {
 		return nil, err
 	}
+	// TODO: handl when n is less than len(bytes)
 	if n != len(bytes) {
 		println("Didn't write all the bytes!")
 	}
