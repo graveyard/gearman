@@ -49,7 +49,9 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 		written += n
 	}
 	handle := <-c.handles
-	return job.New(handle), nil
+	j := job.New(handle)
+	c.addJob(j)
+	return j, nil
 }
 
 func (c *client) addJob(j job.Job) {
@@ -130,6 +132,7 @@ func NewClient(network, addr string) (Client, error) {
 		conn:    conn,
 		packets: make(chan *packet.Packet),
 		handles: make(chan string),
+		jobs:    make(map[string]job.Job),
 	}
 	go c.read(scanner.New(conn))
 
