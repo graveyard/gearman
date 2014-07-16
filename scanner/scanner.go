@@ -27,7 +27,9 @@ func New(r io.Reader) *bufio.Scanner {
 			return needMoreData()
 		}
 
-		return int(headerSize + size), data[0 : headerSize+size], nil
+		var packet = make([]byte, int(headerSize+size))
+		copy(packet, data[0:headerSize+size])
+		return int(headerSize + size), packet, nil
 	})
 	return scanner
 }
