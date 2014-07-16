@@ -19,11 +19,11 @@ type Client interface {
 }
 
 type client struct {
-	conn       io.WriteCloser
-	packets    chan *packet.Packet
-	jobs       map[string]job.Job
-	jobChannel chan job.Job
-	jobLock    sync.RWMutex
+	conn    io.WriteCloser
+	packets chan *packet.Packet
+	jobs    map[string]job.Job
+	newJobs chan job.Job
+	jobLock sync.RWMutex
 }
 
 func (c *client) Close() error {
@@ -48,7 +48,7 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 		}
 		written += n
 	}
-	return <-c.jobChannel, nil
+	return <-c.newJobs, nil
 }
 
 func (c *client) addJob(j job.Job) {
@@ -89,7 +89,7 @@ func (c *client) handlePackets() {
 		case packet.JobCreated:
 			j := job.New(pack.Handle())
 			c.addJob(j)
-			c.jobChannel <- j
+			c.newJobs <- j
 		case packet.WorkStatus:
 			j := c.getJob(pack.Handle())
 			if err := binary.Read(bytes.NewBuffer(pack.Arguments[1]), binary.BigEndian, &j.Status().Numerator); err != nil {
@@ -128,10 +128,10 @@ func NewClient(network, addr string) (Client, error) {
 		return nil, err
 	}
 	c := &client{
-		conn:       conn,
-		packets:    make(chan *packet.Packet),
-		jobChannel: make(chan job.Job),
-		jobs:       make(map[string]job.Job),
+		conn:    conn,
+		packets: make(chan *packet.Packet),
+		newJobs: make(chan job.Job),
+		jobs:    make(map[string]job.Job),
 	}
 	go c.read(scanner.New(conn))
 
