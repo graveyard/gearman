@@ -27,6 +27,7 @@ func New(r io.Reader) *bufio.Scanner {
 			return needMoreData()
 		}
 
+		// bufio.Scanner reuses these bytes, so make sure we copy them.
 		var packet = make([]byte, int(headerSize+size))
 		copy(packet, data[0:headerSize+size])
 		return int(headerSize + size), packet, nil
