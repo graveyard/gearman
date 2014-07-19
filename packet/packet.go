@@ -5,12 +5,17 @@ import (
 	"encoding/binary"
 )
 
+// Packet contains a Gearman packet. See http://gearman.org/protocol/
 type Packet struct {
-	Code      []byte
-	Type      int
+	// The Code for the packet: either \0REQ or \0RES
+	Code []byte
+	// The Type of the packet, e.g. WorkStatus
+	Type int
+	// The Arguments of the packet
 	Arguments [][]byte
 }
 
+// Bytes encodes the Packet into a slice of Bytes
 func (packet *Packet) Bytes() ([]byte, error) {
 	buf := bytes.NewBuffer(packet.Code)
 	if err := binary.Write(buf, binary.BigEndian, int32(packet.Type)); err != nil {
@@ -37,11 +42,12 @@ func (packet *Packet) Bytes() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Handle assumes that the first argument of the packet is the job handle
+// Handle assumes that the first argument of the packet is the job handle, returns it as a string
 func (packet *Packet) Handle() string {
 	return string(packet.Arguments[0])
 }
 
+// New constructs a new Packet from the slice of bytes
 func New(data []byte) (*Packet, error) {
 	packetType := int32(0)
 	if err := binary.Read(bytes.NewBuffer(data[4:8]), binary.BigEndian, &packetType); err != nil {

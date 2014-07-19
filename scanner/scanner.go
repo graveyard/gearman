@@ -11,6 +11,8 @@ func needMoreData() (int, []byte, error) { return 0, nil, nil }
 
 const headerSize = 12
 
+// New returns a new Scanner that parses a Reader as the Gearman protocol.
+// See: http://gearman.org/protocol/
 func New(r io.Reader) *bufio.Scanner {
 	scanner := bufio.NewScanner(r)
 	scanner.Split(func(data []byte, atEOF bool) (int, []byte, error) {

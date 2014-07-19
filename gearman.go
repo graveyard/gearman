@@ -13,8 +13,11 @@ import (
 	"sync"
 )
 
+// Client is a Gearman client
 type Client interface {
+	// Closes the connection to the server
 	Close() error
+	// Submits a new job to the server with the specified function and workload
 	Submit(fn string, data []byte) (job.Job, error)
 }
 
@@ -122,6 +125,7 @@ func (c *client) handlePackets() {
 	}
 }
 
+// NewClient returns a new Gearman client pointing at the specified server
 func NewClient(network, addr string) (Client, error) {
 	conn, err := net.Dial(network, addr)
 	if err != nil {
