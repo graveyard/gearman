@@ -11,8 +11,8 @@ type states struct {
 }
 
 type Status struct {
-	Numerator   int
-	Denominator int
+	Numerator   int32
+	Denominator int32
 }
 
 var State = &states{stateType{0}, stateType{1}, stateType{2}}
