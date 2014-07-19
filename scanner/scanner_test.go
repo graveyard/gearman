@@ -33,10 +33,10 @@ func TestScanner(t *testing.T) {
 	buf := bytes.NewBuffer(tmp)
 
 	scanner := New(buf)
-	assert.Equal(t, scanner.Scan(), true)
+	assert.True(t, scanner.Scan())
 	assert.Equal(t, scanner.Bytes(), noArgB)
-	assert.Equal(t, scanner.Scan(), true)
+	assert.True(t, scanner.Scan())
 	assert.Equal(t, scanner.Bytes(), oneArgB)
-	assert.Equal(t, scanner.Scan(), true)
+	assert.True(t, scanner.Scan())
 	assert.Equal(t, scanner.Bytes(), multArgB)
 }
