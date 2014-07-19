@@ -1,11 +1,13 @@
 SHELL := /bin/bash
 PKG := github.com/Clever/gearman
-SUBPKGS := $(addprefix $(PKG)/, $(shell ls -d */))
+SUBPKGSREL := $(shell ls -d */)
+SUBPKGS := $(addprefix $(PKG)/, $(SUBPKGSREL))
+READMES := $(addsuffix README.md, $(SUBPKGSREL))
 PKGS = $(PKG) $(SUBPKGS)
 
 .PHONY: test golint README
 
-test: $(PKGS)
+test: $(PKGS) docs
 
 golint:
 	@go get github.com/golang/lint/golint
@@ -26,3 +28,12 @@ else
 	@go test $@ -test.v
 	@echo ""
 endif
+
+docs: $(READMES) README.md
+README.md: *.go
+	@go get github.com/robertkrimen/godocdown/godocdown
+	godocdown $(PKG) > $@
+%/README.md: PATH := $(PATH):$(GOPATH)/bin
+%/README.md: %/*.go
+	@go get github.com/robertkrimen/godocdown/godocdown
+	godocdown $(PKG)/$(shell dirname $@) > $@
