@@ -1,22 +1,28 @@
 SHELL := /bin/bash
-PKG = github.com/Clever/gearman
-SUBPKGSREL = $(shell ls -d */ | grep -v bin | grep -v deb)
-SUBPKGS = $(addprefix $(PKG)/,$(SUBPKGSREL))
+PKG := github.com/Clever/gearman
+SUBPKGS := $(addprefix $(PKG)/, $(shell ls -d */))
 PKGS = $(PKG) $(SUBPKGS)
-.PHONY: test $(PKGS) $(SUBPKGSREL)
+
+.PHONY: test golint README
 
 test: $(PKGS)
 
-$(PKGS):
-ifeq ($(LINT),1)
-	golint $(GOPATH)/src/$@*/**.go
-endif
-	go get -d -t $@
-ifeq ($(COVERAGE),1)
-	go test -cover -coverprofile=$(GOPATH)/src/$@/c.out $@ -test.v
-	go tool cover -html=$(GOPATH)/src/$@/c.out
-else
-	go test $@ -test.v
-endif
+golint:
+	@go get github.com/golang/lint/golint
 
-$(SUBPKGSREL): %: $(addprefix $(PKG)/, %)
+$(PKGS): golint README
+	@go get -d -t $@
+	@gofmt -w=true $(GOPATH)/src/$@/*.go
+ifneq ($(NOLINT),1)
+	@echo "LINTING..."
+	@PATH=$(PATH):$(GOPATH)/bin golint $(GOPATH)/src/$@/*.go
+	@echo ""
+endif
+ifeq ($(COVERAGE),1)
+	@go test -cover -coverprofile=$(GOPATH)/src/$@/c.out $@ -test.v
+	@go tool cover -html=$(GOPATH)/src/$@/c.out
+else
+	@echo "TESTING..."
+	@go test $@ -test.v
+	@echo ""
+endif
