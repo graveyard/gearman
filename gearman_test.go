@@ -44,7 +44,7 @@ func TestSubmit(t *testing.T) {
 		Type:      packet.SubmitJob,
 		Arguments: [][]byte{[]byte("my_function"), []byte{}, []byte("my data")},
 	}
-	b, err := expectedPacket.Bytes()
+	b, err := expectedPacket.MarshalBinary()
 	assert.Nil(t, err)
 	assert.Equal(t, buf.Bytes(), b)
 }

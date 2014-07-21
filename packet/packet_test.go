@@ -23,7 +23,7 @@ var confs = []map[string]interface{}{
 func TestBytes(t *testing.T) {
 	for _, conf := range confs {
 		pack := conf["pack"].(Packet)
-		bytes, err := pack.Bytes()
+		bytes, err := pack.MarshalBinary()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -33,8 +33,8 @@ func TestBytes(t *testing.T) {
 
 func TestConstructor(t *testing.T) {
 	for _, conf := range confs {
-		pack, err := New(conf["bytes"].([]byte))
-		if err != nil {
+		pack := &Packet{}
+		if err := pack.UnmarshalBinary(conf["bytes"].([]byte)); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, *pack, conf["pack"])

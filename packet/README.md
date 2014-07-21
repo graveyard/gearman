@@ -39,20 +39,6 @@ type Packet struct {
 
 Packet contains a Gearman packet. See http://gearman.org/protocol/
 
-#### func  New
-
-```go
-func New(data []byte) (*Packet, error)
-```
-New constructs a new Packet from the slice of bytes
-
-#### func (*Packet) Bytes
-
-```go
-func (packet *Packet) Bytes() ([]byte, error)
-```
-Bytes encodes the Packet into a slice of Bytes
-
 #### func (*Packet) Handle
 
 ```go
@@ -60,3 +46,17 @@ func (packet *Packet) Handle() string
 ```
 Handle assumes that the first argument of the packet is the job handle, returns
 it as a string
+
+#### func (*Packet) MarshalBinary
+
+```go
+func (packet *Packet) MarshalBinary() ([]byte, error)
+```
+MarshalBinary implements the encoding.BinaryMarshaler interface
+
+#### func (*Packet) UnmarshalBinary
+
+```go
+func (packet *Packet) UnmarshalBinary(data []byte) error
+```
+UnmarshalBinary implements the encoding.BinaryUnmarshaler interface

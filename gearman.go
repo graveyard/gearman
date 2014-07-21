@@ -39,7 +39,7 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	code := []byte{0}
 	code = append(code, []byte("REQ")...)
 	pack := &packet.Packet{Code: code, Type: packet.SubmitJob, Arguments: [][]byte{[]byte(fn), []byte{}, data}}
-	b, err := pack.Bytes()
+	b, err := pack.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
@@ -69,8 +69,8 @@ func (c *client) deleteJob(handle string) {
 
 func (c *client) read(scanner *bufio.Scanner) {
 	for scanner.Scan() {
-		pack, err := packet.New(scanner.Bytes())
-		if err != nil {
+		pack := &packet.Packet{}
+		if err := pack.UnmarshalBinary(scanner.Bytes()); err != nil {
 			fmt.Printf("ERROR PARSING PACKET! %#v\n", err)
 		} else {
 			c.packets <- pack
