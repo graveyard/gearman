@@ -24,12 +24,21 @@ const (
 )
 ```
 
+```go
+var (
+	// Req is the code for a Request packet
+	Req = packetCode([]byte{0, byte('R'), byte('E'), byte('Q')})
+	// Res is the code for a Response packet
+	Res = packetCode([]byte{0, byte('R'), byte('E'), byte('Q')})
+)
+```
+
 #### type Packet
 
 ```go
 type Packet struct {
 	// The Code for the packet: either \0REQ or \0RES
-	Code []byte
+	Code packetCode
 	// The Type of the packet, e.g. WorkStatus
 	Type int
 	// The Arguments of the packet

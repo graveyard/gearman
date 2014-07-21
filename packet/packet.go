@@ -3,12 +3,22 @@ package packet
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
+)
+
+type packetCode []byte
+
+var (
+	// Req is the code for a Request packet
+	Req = packetCode([]byte{0, byte('R'), byte('E'), byte('Q')})
+	// Res is the code for a Response packet
+	Res = packetCode([]byte{0, byte('R'), byte('E'), byte('Q')})
 )
 
 // Packet contains a Gearman packet. See http://gearman.org/protocol/
 type Packet struct {
 	// The Code for the packet: either \0REQ or \0RES
-	Code []byte
+	Code packetCode
 	// The Type of the packet, e.g. WorkStatus
 	Type int
 	// The Arguments of the packet
@@ -28,9 +38,13 @@ func (packet *Packet) UnmarshalBinary(data []byte) error {
 	}
 	packet.Arguments = arguments
 
-	code := make([]byte, 4)
-	copy(code, data[0:4])
-	packet.Code = code
+	if bytes.Compare(data[0:4], Req) == 0 {
+		packet.Code = Req
+	} else if bytes.Compare(data[0:4], Res) == 0 {
+		packet.Code = Res
+	} else {
+		return fmt.Errorf("unrecognized packet code %#v", data[0:4])
+	}
 
 	return nil
 }

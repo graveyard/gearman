@@ -36,9 +36,7 @@ func (c *client) Close() error {
 }
 
 func (c *client) Submit(fn string, data []byte) (job.Job, error) {
-	code := []byte{0}
-	code = append(code, []byte("REQ")...)
-	pack := &packet.Packet{Code: code, Type: packet.SubmitJob, Arguments: [][]byte{[]byte(fn), []byte{}, data}}
+	pack := &packet.Packet{Code: packet.Req, Type: packet.SubmitJob, Arguments: [][]byte{[]byte(fn), []byte{}, data}}
 	b, err := pack.MarshalBinary()
 	if err != nil {
 		return nil, err
