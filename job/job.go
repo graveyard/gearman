@@ -87,13 +87,11 @@ func (j *job) handlePackets(packets chan *packet.Packet) {
 			close(j.data)
 			close(j.warnings)
 			close(j.done)
-			close(packets)
 		case packet.WorkFail:
 			j.state = Failed
 			close(j.data)
 			close(j.warnings)
 			close(j.done)
-			close(packets)
 		case packet.WorkData:
 			j.data <- pack.Arguments[1]
 		case packet.WorkWarning:

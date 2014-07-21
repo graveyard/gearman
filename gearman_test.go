@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"sync"
 	"testing"
-	"time"
 )
 
 type bufferCloser struct {
@@ -65,18 +64,18 @@ func TestJobCreated(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	var j job.Job
+	var packets chan *packet.Packet
 	go func() {
 		defer wg.Done()
 		j = <-c.newJobs
+		packets = c.getJob("5")
 		assert.Equal(t, j.Handle(), "5")
 	}()
 	c.packets <- handlePacket("5", packet.JobCreated, nil)
 	wg.Wait()
 	c.packets <- handlePacket("5", packet.WorkComplete, nil)
-	_ = j.Run()
-	// TODO: Is there a way to synchronize this with the goroutine converted internally? For now,
-	// wait 50 ms.
-	time.Sleep(50000)
+	j.Run()
+	<-packets // Wait until packet channel is closed, so we know that we've deleted the job
 	assert.Nil(t, c.jobs["5"])
 }
 

@@ -87,8 +87,9 @@ func (c *client) routePackets() {
 			c.addJob(handle, packets)
 			c.newJobs <- j
 			go func() {
+				defer close(packets)
+				defer c.deleteJob(handle)
 				_ = j.Run()
-				c.deleteJob(handle)
 			}()
 		} else {
 			c.getJob(handle) <- pack
