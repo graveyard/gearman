@@ -20,18 +20,18 @@ type Packet struct {
 	// The Code for the packet: either \0REQ or \0RES
 	Code packetCode
 	// The Type of the packet, e.g. WorkStatus
-	Type int
+	Type PacketType
 	// The Arguments of the packet
 	Arguments [][]byte
 }
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface
 func (packet *Packet) UnmarshalBinary(data []byte) error {
-	packetType := int32(0)
-	if err := binary.Read(bytes.NewBuffer(data[4:8]), binary.BigEndian, &packetType); err != nil {
+	kind := int32(0)
+	if err := binary.Read(bytes.NewBuffer(data[4:8]), binary.BigEndian, &kind); err != nil {
 		return err
 	}
-	packet.Type = int(packetType)
+	packet.Type = PacketType(kind)
 	arguments := [][]byte{}
 	if len(data) > 12 {
 		arguments = bytes.Split(data[12:len(data)], []byte{0})

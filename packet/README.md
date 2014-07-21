@@ -6,25 +6,6 @@
 ## Usage
 
 ```go
-const (
-	// SubmitJob = SUBMIT_JOB
-	SubmitJob = 7
-	// JobCreated = JOB_CREATED
-	JobCreated = 8
-	// WorkStatus = WORK_STATUS
-	WorkStatus = 12
-	// WorkComplete = WORK_COMPLETE
-	WorkComplete = 13
-	// WorkFail = WORK_FAIL
-	WorkFail = 14
-	// WorkData = WORK_DATA
-	WorkData = 28
-	// WorkWarning = WORK_WARNING
-	WorkWarning = 29
-)
-```
-
-```go
 var (
 	// Req is the code for a Request packet
 	Req = packetCode([]byte{0, byte('R'), byte('E'), byte('Q')})
@@ -40,7 +21,7 @@ type Packet struct {
 	// The Code for the packet: either \0REQ or \0RES
 	Code packetCode
 	// The Type of the packet, e.g. WorkStatus
-	Type int
+	Type PacketType
 	// The Arguments of the packet
 	Arguments [][]byte
 }
@@ -69,3 +50,30 @@ MarshalBinary implements the encoding.BinaryMarshaler interface
 func (packet *Packet) UnmarshalBinary(data []byte) error
 ```
 UnmarshalBinary implements the encoding.BinaryUnmarshaler interface
+
+#### type PacketType
+
+```go
+type PacketType int
+```
+
+PacketType represents the type of the Gearman packet
+
+```go
+const (
+	// SubmitJob = SUBMIT_JOB
+	SubmitJob PacketType = 7
+	// JobCreated = JOB_CREATED
+	JobCreated = 8
+	// WorkStatus = WORK_STATUS
+	WorkStatus = 12
+	// WorkComplete = WORK_COMPLETE
+	WorkComplete = 13
+	// WorkFail = WORK_FAIL
+	WorkFail = 14
+	// WorkData = WORK_DATA
+	WorkData = 28
+	// WorkWarning = WORK_WARNING
+	WorkWarning = 29
+)
+```
