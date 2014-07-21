@@ -12,7 +12,7 @@ test: $(PKGS) docs
 golint:
 	@go get github.com/golang/lint/golint
 
-$(PKGS): golint README
+$(PKGS): golint docs
 	@go get -d -t $@
 	@gofmt -w=true $(GOPATH)/src/$@/*.go
 ifneq ($(NOLINT),1)

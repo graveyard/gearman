@@ -2,13 +2,13 @@ package gearman
 
 import (
 	"bytes"
-	"encoding/binary"
 	"github.com/Clever/gearman/job"
 	"github.com/Clever/gearman/packet"
 	"github.com/stretchr/testify/assert"
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 )
 
 type bufferCloser struct {
@@ -25,16 +25,16 @@ func mockClient() *client {
 		packets: make(chan *packet.Packet),
 		// Add buffers to prevent blocking in test cases
 		newJobs: make(chan job.Job, 10),
-		jobs:    make(map[string]job.Job, 10),
+		jobs:    make(map[string]chan *packet.Packet, 10),
 	}
-	go c.handlePackets()
+	go c.routePackets()
 	return c
 }
 
 func TestSubmit(t *testing.T) {
 	c := mockClient()
 	buf := c.conn.(*bufferCloser)
-	expected := job.New("the_handle")
+	expected := job.New("the_handle", make(chan *packet.Packet))
 	c.newJobs <- expected
 	j, err := c.Submit("my_function", []byte("my data"))
 	assert.Nil(t, err)
@@ -49,20 +49,6 @@ func TestSubmit(t *testing.T) {
 	assert.Equal(t, buf.Bytes(), b)
 }
 
-func statusPacket(handle string, numerator, denominator int32) *packet.Packet {
-	arguments := [][]byte{}
-	bufNum := bytes.NewBuffer(make([]byte, 4))
-	bufDen := bytes.NewBuffer(make([]byte, 4))
-	if err := binary.Write(bufNum, binary.BigEndian, numerator); err != nil {
-		panic(err)
-	}
-	if err := binary.Write(bufDen, binary.BigEndian, denominator); err != nil {
-		panic(err)
-	}
-	arguments = append(arguments, bufNum.Bytes(), bufDen.Bytes())
-	return handlePacket(handle, packet.WorkStatus, arguments)
-}
-
 func handlePacket(handle string, kind int, arguments [][]byte) *packet.Packet {
 	if arguments == nil {
 		arguments = [][]byte{}
@@ -74,39 +60,45 @@ func handlePacket(handle string, kind int, arguments [][]byte) *packet.Packet {
 	}
 }
 
-func TestHandlePackets(t *testing.T) {
+func TestJobCreated(t *testing.T) {
 	c := mockClient()
-	for i := 0; i < 5; i++ {
-		c.jobs[strconv.Itoa(i)] = job.New(strconv.Itoa(i))
-	}
 	wg := sync.WaitGroup{}
-	wg.Add(3)
+	wg.Add(1)
+	var j job.Job
 	go func() {
 		defer wg.Done()
-		for data := range c.jobs["3"].Data() {
-			assert.Equal(t, data, []byte("data!!"))
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		for warning := range c.jobs["4"].Warnings() {
-			assert.Equal(t, warning, []byte("warning :(:("))
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		j := <-c.newJobs
+		j = <-c.newJobs
 		assert.Equal(t, j.Handle(), "5")
 	}()
-	c.packets <- statusPacket("0", 10, 100)
-	c.packets <- handlePacket("1", packet.WorkComplete, nil)
-	c.packets <- handlePacket("2", packet.WorkFail, nil)
-	c.packets <- handlePacket("3", packet.WorkData, [][]byte{[]byte("data!!")})
-	c.packets <- handlePacket("4", packet.WorkWarning, [][]byte{[]byte("warning :(:(")})
-	assert.Nil(t, c.jobs["1"])
-	assert.Nil(t, c.jobs["2"])
-	c.packets <- handlePacket("3", packet.WorkComplete, nil)
-	c.packets <- handlePacket("4", packet.WorkComplete, nil)
 	c.packets <- handlePacket("5", packet.JobCreated, nil)
 	wg.Wait()
+	c.packets <- handlePacket("5", packet.WorkComplete, nil)
+	_ = j.Run()
+	// TODO: Is there a way to synchronize this with the goroutine converted internally? For now,
+	// wait 50 ms.
+	time.Sleep(50000)
+	assert.Nil(t, c.jobs["5"])
+}
+
+func TestRoutePackets(t *testing.T) {
+	c := mockClient()
+	packetChans := []chan *packet.Packet{}
+	for i := 0; i < 5; i++ {
+		packetChans = append(packetChans, make(chan *packet.Packet, 10))
+		c.jobs[strconv.Itoa(i)] = packetChans[i]
+	}
+
+	packets := []*packet.Packet{}
+	packets = append(packets, handlePacket("0", packet.WorkFail, nil))
+	packets = append(packets, handlePacket("1", packet.WorkFail, nil))
+	packets = append(packets, handlePacket("2", packet.WorkFail, nil))
+	packets = append(packets, handlePacket("3", packet.WorkFail, nil))
+	packets = append(packets, handlePacket("4", packet.WorkFail, nil))
+	for _, pack := range packets {
+		c.packets <- pack
+	}
+	for i := 0; i < 5; i++ {
+		pack := <-packetChans[i]
+		assert.Equal(t, pack, packets[i])
+	}
 }

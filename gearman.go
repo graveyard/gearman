@@ -3,7 +3,6 @@ package gearman
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"github.com/Clever/gearman/job"
 	"github.com/Clever/gearman/packet"
@@ -24,7 +23,7 @@ type Client interface {
 type client struct {
 	conn    io.WriteCloser
 	packets chan *packet.Packet
-	jobs    map[string]job.Job
+	jobs    map[string]chan *packet.Packet
 	newJobs chan job.Job
 	jobLock sync.RWMutex
 }
@@ -47,13 +46,13 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	return <-c.newJobs, nil
 }
 
-func (c *client) addJob(j job.Job) {
+func (c *client) addJob(handle string, packets chan *packet.Packet) {
 	c.jobLock.Lock()
 	defer c.jobLock.Unlock()
-	c.jobs[j.Handle()] = j
+	c.jobs[handle] = packets
 }
 
-func (c *client) getJob(handle string) job.Job {
+func (c *client) getJob(handle string) chan *packet.Packet {
 	c.jobLock.RLock()
 	defer c.jobLock.RUnlock()
 	return c.jobs[handle]
@@ -79,42 +78,20 @@ func (c *client) read(scanner *bufio.Scanner) {
 	}
 }
 
-func (c *client) handlePackets() {
+func (c *client) routePackets() {
 	for pack := range c.packets {
 		handle := string(pack.Arguments[0])
-		switch pack.Type {
-		case packet.JobCreated:
-			j := job.New(handle)
-			c.addJob(j)
+		if pack.Type == packet.JobCreated {
+			packets := make(chan *packet.Packet)
+			j := job.New(handle, packets)
+			c.addJob(handle, packets)
 			c.newJobs <- j
-		case packet.WorkStatus:
-			j := c.getJob(handle)
-			if err := binary.Read(bytes.NewBuffer(pack.Arguments[1]), binary.BigEndian, &j.Status().Numerator); err != nil {
-				fmt.Println("Error decoding numerator", err)
-			}
-			if err := binary.Read(bytes.NewBuffer(pack.Arguments[2]), binary.BigEndian, &j.Status().Denominator); err != nil {
-				fmt.Println("Error decoding denominator", err)
-			}
-		case packet.WorkComplete:
-			j := c.getJob(handle)
-			j.SetState(job.Completed)
-			close(j.Data())
-			close(j.Warnings())
-			c.deleteJob(handle)
-		case packet.WorkFail:
-			j := c.getJob(handle)
-			j.SetState(job.Failed)
-			close(j.Data())
-			close(j.Warnings())
-			c.deleteJob(handle)
-		case packet.WorkData:
-			j := c.getJob(handle)
-			j.Data() <- pack.Arguments[1]
-		case packet.WorkWarning:
-			j := c.getJob(handle)
-			j.Warnings() <- pack.Arguments[1]
-		default:
-			fmt.Println("WARNING: Unimplemented packet type", pack.Type)
+			go func() {
+				_ = j.Run()
+				c.deleteJob(handle)
+			}()
+		} else {
+			c.getJob(handle) <- pack
 		}
 	}
 }
@@ -129,11 +106,11 @@ func NewClient(network, addr string) (Client, error) {
 		conn:    conn,
 		packets: make(chan *packet.Packet),
 		newJobs: make(chan job.Job),
-		jobs:    make(map[string]job.Job),
+		jobs:    make(map[string]chan *packet.Packet),
 	}
 	go c.read(scanner.New(conn))
 
-	go c.handlePackets()
+	go c.routePackets()
 
 	return c, nil
 }

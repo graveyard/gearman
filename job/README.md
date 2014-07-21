@@ -13,17 +13,14 @@ type Job interface {
 	Handle() string
 	// Data returns a channel of work data sent by the job
 	// NOTE: If you don't listen to this channel, you will block parsing of new Gearman packets
-	Data() chan []byte
+	Data() <-chan []byte
 	// Warnings returns a channel of warnings sent by the job
 	// NOTE: If you don't listen to this channel, you will block parsing of new Gearman packets
-	Warnings() chan []byte
+	Warnings() <-chan []byte
 	// Status returns the current status of the gearman job
-	Status() *Status
-	// State returns the current state of the gearman job.
-	// One of: State.Running, State.Completed, or State.Failed
-	State() State
-	// Sets the state for the job
-	SetState(State)
+	Status() Status
+	// Blocks until the job completes. Returns the state, Completed or Failed.
+	Run() State
 }
 ```
 
@@ -32,9 +29,11 @@ Job represents a Gearman job
 #### func  New
 
 ```go
-func New(handle string) Job
+func New(handle string, packets chan *packet.Packet) Job
 ```
-New creates a new Gearman job with the specified handle
+New creates a new Gearman job with the specified handle, updating the job based
+on the packets in the packets channel. The only packets coming down packets
+should be packets for this job.
 
 #### type State
 
@@ -59,8 +58,8 @@ const (
 
 ```go
 type Status struct {
-	Numerator   int32
-	Denominator int32
+	Numerator   int
+	Denominator int
 }
 ```
 
