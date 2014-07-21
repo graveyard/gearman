@@ -48,7 +48,7 @@ type job struct {
 	done           chan struct{}
 }
 
-func (j *job) Handle() string {
+func (j job) Handle() string {
 	return j.handle
 }
 
@@ -60,7 +60,7 @@ func (j *job) Warnings() <-chan []byte {
 	return j.warnings
 }
 
-func (j *job) Status() Status {
+func (j job) Status() Status {
 	return j.status
 }
 
