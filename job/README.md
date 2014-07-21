@@ -5,11 +5,6 @@
 
 ## Usage
 
-```go
-var State = &states{stateType{0}, stateType{1}, stateType{2}}
-```
-States of a Gearman job: State.Running, State.Completed, State.Failed
-
 #### type Job
 
 ```go
@@ -26,9 +21,9 @@ type Job interface {
 	Status() *Status
 	// State returns the current state of the gearman job.
 	// One of: State.Running, State.Completed, or State.Failed
-	State() stateType
+	State() State
 	// Sets the state for the job
-	SetState(stateType)
+	SetState(State)
 }
 ```
 
@@ -40,6 +35,25 @@ Job represents a Gearman job
 func New(handle string) Job
 ```
 New creates a new Gearman job with the specified handle
+
+#### type State
+
+```go
+type State int
+```
+
+State of a Gearman job
+
+```go
+const (
+	// Running means that the job has not yet finished
+	Running State = iota
+	// Completed means that the job finished successfully
+	Completed
+	// Failed means that the job failed
+	Failed
+)
+```
 
 #### type Status
 

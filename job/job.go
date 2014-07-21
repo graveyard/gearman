@@ -1,23 +1,22 @@
 package job
 
-type stateType struct {
-	i int
-}
+// State of a Gearman job
+type State int
 
-type states struct {
-	Running   stateType
-	Completed stateType
-	Failed    stateType
-}
+const (
+	// Running means that the job has not yet finished
+	Running State = iota
+	// Completed means that the job finished successfully
+	Completed
+	// Failed means that the job failed
+	Failed
+)
 
 // Status of a Gearman job
 type Status struct {
 	Numerator   int32
 	Denominator int32
 }
-
-// States of a Gearman job: State.Running, State.Completed, State.Failed
-var State = &states{stateType{0}, stateType{1}, stateType{2}}
 
 // Job represents a Gearman job
 type Job interface {
@@ -33,16 +32,16 @@ type Job interface {
 	Status() *Status
 	// State returns the current state of the gearman job.
 	// One of: State.Running, State.Completed, or State.Failed
-	State() stateType
+	State() State
 	// Sets the state for the job
-	SetState(stateType)
+	SetState(State)
 }
 
 type job struct {
 	handle         string
 	data, warnings chan []byte
 	status         *Status
-	state          stateType
+	state          State
 }
 
 func (j *job) Handle() string {
@@ -61,11 +60,11 @@ func (j *job) Status() *Status {
 	return j.status
 }
 
-func (j *job) State() stateType {
+func (j *job) State() State {
 	return j.state
 }
 
-func (j *job) SetState(state stateType) {
+func (j *job) SetState(state State) {
 	j.state = state
 }
 
@@ -74,7 +73,7 @@ func New(handle string) Job {
 	j := &job{handle: handle}
 	j.data = make(chan []byte)
 	j.warnings = make(chan []byte)
-	j.state = State.Running
+	j.state = Running
 	j.status = &Status{0, 0}
 	return j
 }
