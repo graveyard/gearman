@@ -70,10 +70,11 @@ func (j *job) SetState(state State) {
 
 // New creates a new Gearman job with the specified handle
 func New(handle string) Job {
-	j := &job{handle: handle}
-	j.data = make(chan []byte)
-	j.warnings = make(chan []byte)
-	j.state = Running
-	j.status = &Status{0, 0}
-	return j
+	return &job{
+		handle:   handle,
+		data:     make(chan []byte),
+		warnings: make(chan []byte),
+		status:   &Status{0, 0},
+		state:    Running,
+	}
 }
