@@ -39,17 +39,12 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	code := []byte{0}
 	code = append(code, []byte("REQ")...)
 	pack := &packet.Packet{Code: code, Type: packet.SubmitJob, Arguments: [][]byte{[]byte(fn), []byte{}, data}}
-	bytes, err := pack.Bytes()
+	b, err := pack.Bytes()
 	if err != nil {
 		return nil, err
 	}
-	written := 0
-	for written != len(bytes) {
-		n, err := c.conn.Write(bytes[written:len(bytes)])
-		if err != nil {
-			return nil, err
-		}
-		written += n
+	if _, err := io.Copy(c.conn, bytes.NewBuffer(b)); err != nil {
+		return nil, err
 	}
 	return <-c.newJobs, nil
 }
