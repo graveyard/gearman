@@ -81,13 +81,14 @@ func (c *client) read(scanner *bufio.Scanner) {
 
 func (c *client) handlePackets() {
 	for pack := range c.packets {
+		handle := string(pack.Arguments[0])
 		switch pack.Type {
 		case packet.JobCreated:
-			j := job.New(pack.Handle())
+			j := job.New(handle)
 			c.addJob(j)
 			c.newJobs <- j
 		case packet.WorkStatus:
-			j := c.getJob(pack.Handle())
+			j := c.getJob(handle)
 			if err := binary.Read(bytes.NewBuffer(pack.Arguments[1]), binary.BigEndian, &j.Status().Numerator); err != nil {
 				fmt.Println("Error decoding numerator", err)
 			}
@@ -95,22 +96,22 @@ func (c *client) handlePackets() {
 				fmt.Println("Error decoding denominator", err)
 			}
 		case packet.WorkComplete:
-			j := c.getJob(pack.Handle())
+			j := c.getJob(handle)
 			j.SetState(job.Completed)
 			close(j.Data())
 			close(j.Warnings())
-			c.deleteJob(pack.Handle())
+			c.deleteJob(handle)
 		case packet.WorkFail:
-			j := c.getJob(pack.Handle())
+			j := c.getJob(handle)
 			j.SetState(job.Failed)
 			close(j.Data())
 			close(j.Warnings())
-			c.deleteJob(pack.Handle())
+			c.deleteJob(handle)
 		case packet.WorkData:
-			j := c.getJob(pack.Handle())
+			j := c.getJob(handle)
 			j.Data() <- pack.Arguments[1]
 		case packet.WorkWarning:
-			j := c.getJob(pack.Handle())
+			j := c.getJob(handle)
 			j.Warnings() <- pack.Arguments[1]
 		default:
 			fmt.Println("WARNING: Unimplemented packet type", pack.Type)

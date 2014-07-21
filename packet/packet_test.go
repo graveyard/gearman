@@ -40,9 +40,3 @@ func TestConstructor(t *testing.T) {
 		assert.Equal(t, *pack, conf["pack"])
 	}
 }
-
-func TestHandle(t *testing.T) {
-	expected := "The Handle"
-	pack := Packet{Arguments: [][]byte{[]byte(expected)}}
-	assert.Equal(t, pack.Handle(), expected)
-}

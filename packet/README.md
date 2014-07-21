@@ -29,14 +29,6 @@ type Packet struct {
 
 Packet contains a Gearman packet. See http://gearman.org/protocol/
 
-#### func (*Packet) Handle
-
-```go
-func (packet *Packet) Handle() string
-```
-Handle assumes that the first argument of the packet is the job handle, returns
-it as a string
-
 #### func (*Packet) MarshalBinary
 
 ```go

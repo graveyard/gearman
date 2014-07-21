@@ -75,8 +75,3 @@ func (packet *Packet) MarshalBinary() ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
-
-// Handle assumes that the first argument of the packet is the job handle, returns it as a string
-func (packet *Packet) Handle() string {
-	return string(packet.Arguments[0])
-}
