@@ -43,8 +43,10 @@ from that job:
 type Client interface {
 	// Closes the connection to the server
 	Close() error
-	// Submits a new job to the server with the specified function and workload
-	Submit(fn string, data []byte) (job.Job, error)
+	// Submits a new job to the server with the specified function and payload.
+	// You can optionally provide custom ReadWriters for work data and warnings to be written to.
+	// Otherwise, it's buffered internally in the returned Job.
+	Submit(fn string, payload []byte, data, warnings io.ReadWriter) (job.Job, error)
 }
 ```
 

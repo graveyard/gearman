@@ -1,8 +1,10 @@
 package job
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/Clever/gearman/packet"
+	"io"
 	"strconv"
 )
 
@@ -28,12 +30,10 @@ type Status struct {
 type Job interface {
 	// The handle of the job
 	Handle() string
-	// Data returns a channel of work data sent by the job
-	// NOTE: If you don't listen to this channel, you will block parsing of new Gearman packets
-	Data() <-chan []byte
-	// Warnings returns a channel of warnings sent by the job
-	// NOTE: If you don't listen to this channel, you will block parsing of new Gearman packets
-	Warnings() <-chan []byte
+	// Data returns an io.Reader of all the bytes sent as work data
+	Data() io.Reader
+	// Warnings returns an io.Reader of all the bytes sent as work warnings
+	Warnings() io.Reader
 	// Status returns the current status of the gearman job
 	Status() Status
 	// Blocks until the job completes. Returns the state, Completed or Failed.
@@ -42,7 +42,7 @@ type Job interface {
 
 type job struct {
 	handle         string
-	data, warnings chan []byte
+	data, warnings io.ReadWriter
 	status         Status
 	state          State
 	done           chan struct{}
@@ -52,11 +52,11 @@ func (j job) Handle() string {
 	return j.handle
 }
 
-func (j *job) Data() <-chan []byte {
+func (j *job) Data() io.Reader {
 	return j.data
 }
 
-func (j *job) Warnings() <-chan []byte {
+func (j *job) Warnings() io.Reader {
 	return j.warnings
 }
 
@@ -84,18 +84,18 @@ func (j *job) handlePackets(packets chan *packet.Packet) {
 			j.status = Status{Numerator: num, Denominator: den}
 		case packet.WorkComplete:
 			j.state = Completed
-			close(j.data)
-			close(j.warnings)
 			close(j.done)
 		case packet.WorkFail:
 			j.state = Failed
-			close(j.data)
-			close(j.warnings)
 			close(j.done)
 		case packet.WorkData:
-			j.data <- pack.Arguments[1]
+			if _, err := j.data.Write(pack.Arguments[1]); err != nil {
+				fmt.Printf("Error writing data", pack.Arguments[1], err)
+			}
 		case packet.WorkWarning:
-			j.warnings <- pack.Arguments[1]
+			if _, err := j.warnings.Write(pack.Arguments[1]); err != nil {
+				fmt.Printf("Error writing warnings", pack.Arguments[1], err)
+			}
 		default:
 			fmt.Println("WARNING: Unimplemented packet type", pack.Type)
 		}
@@ -104,11 +104,19 @@ func (j *job) handlePackets(packets chan *packet.Packet) {
 
 // New creates a new Gearman job with the specified handle, updating the job based on the packets
 // in the packets channel. The only packets coming down packets should be packets for this job.
-func New(handle string, packets chan *packet.Packet) Job {
+// Optionally, you can pass in custom io.ReadWriters if you want to control where the data and
+// warnings packets get buffered. By default they're buffered internally.
+func New(handle string, data, warnings io.ReadWriter, packets chan *packet.Packet) Job {
+	if data == nil {
+		data = bytes.NewBuffer([]byte{})
+	}
+	if warnings == nil {
+		warnings = bytes.NewBuffer([]byte{})
+	}
 	j := &job{
 		handle:   handle,
-		data:     make(chan []byte),
-		warnings: make(chan []byte),
+		data:     data,
+		warnings: warnings,
 		status:   Status{0, 0},
 		state:    Running,
 		done:     make(chan struct{}),

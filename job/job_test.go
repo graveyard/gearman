@@ -3,8 +3,8 @@ package job
 import (
 	"github.com/Clever/gearman/packet"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"strconv"
-	"sync"
 	"testing"
 )
 
@@ -27,21 +27,21 @@ func handlePacket(handle string, kind int, arguments [][]byte) *packet.Packet {
 
 func TestHandlePacketsComplete(t *testing.T) {
 	packets := make(chan *packet.Packet)
-	j := New("0", packets)
+	j := New("0", nil, nil, packets)
 	packets <- handlePacket("", packet.WorkComplete, nil)
 	assert.Equal(t, j.Run(), Completed)
 }
 
 func TestHandlePacketsFailed(t *testing.T) {
 	packets := make(chan *packet.Packet)
-	j := New("0", packets)
+	j := New("0", nil, nil, packets)
 	packets <- handlePacket("", packet.WorkFail, nil)
 	assert.Equal(t, j.Run(), Failed)
 }
 
 func TestHandlePacketsStatus(t *testing.T) {
 	packets := make(chan *packet.Packet)
-	j := New("0", packets)
+	j := New("0", nil, nil, packets)
 	packets <- statusPacket("", 10, 100)
 	packets <- handlePacket("", packet.WorkComplete, nil)
 	j.Run()
@@ -51,18 +51,15 @@ func TestHandlePacketsStatus(t *testing.T) {
 
 func TestHandlePacketsDataWarning(t *testing.T) {
 	packets := make(chan *packet.Packet)
-	j := New("0", packets)
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		assert.Equal(t, <-j.Data(), []byte("some data"))
-	}()
-	go func() {
-		defer wg.Done()
-		assert.Equal(t, <-j.Warnings(), []byte("some warning"))
-	}()
+	j := New("0", nil, nil, packets)
 	packets <- handlePacket("", packet.WorkData, [][]byte{[]byte("some data")})
 	packets <- handlePacket("", packet.WorkWarning, [][]byte{[]byte("some warning")})
-	wg.Wait()
+	packets <- handlePacket("", packet.WorkComplete, nil)
+	j.Run()
+	data, err := ioutil.ReadAll(j.Data())
+	assert.Nil(t, err)
+	warning, err := ioutil.ReadAll(j.Warnings())
+	assert.Nil(t, err)
+	assert.Equal(t, data, []byte("some data"))
+	assert.Equal(t, warning, []byte("some warning"))
 }

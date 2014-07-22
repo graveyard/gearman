@@ -16,16 +16,24 @@ import (
 type Client interface {
 	// Closes the connection to the server
 	Close() error
-	// Submits a new job to the server with the specified function and workload
-	Submit(fn string, data []byte) (job.Job, error)
+	// Submits a new job to the server with the specified function and payload.
+	// You can optionally provide custom ReadWriters for work data and warnings to be written to.
+	// Otherwise, it's buffered internally in the returned Job.
+	Submit(fn string, payload []byte, data, warnings io.ReadWriter) (job.Job, error)
 }
 
 type client struct {
-	conn    io.WriteCloser
-	packets chan *packet.Packet
-	jobs    map[string]chan *packet.Packet
-	newJobs chan job.Job
-	jobLock sync.RWMutex
+	conn        io.WriteCloser
+	packets     chan *packet.Packet
+	jobs        map[string]chan *packet.Packet
+	partialJobs chan *partialJob
+	newJobs     chan job.Job
+	jobLock     sync.RWMutex
+}
+
+type partialJob struct {
+	data     io.ReadWriter
+	warnings io.ReadWriter
 }
 
 func (c *client) Close() error {
@@ -34,8 +42,8 @@ func (c *client) Close() error {
 	return nil
 }
 
-func (c *client) Submit(fn string, data []byte) (job.Job, error) {
-	pack := &packet.Packet{Code: packet.Req, Type: packet.SubmitJob, Arguments: [][]byte{[]byte(fn), []byte{}, data}}
+func (c *client) Submit(fn string, payload []byte, data, warnings io.ReadWriter) (job.Job, error) {
+	pack := &packet.Packet{Code: packet.Req, Type: packet.SubmitJob, Arguments: [][]byte{[]byte(fn), []byte{}, payload}}
 	b, err := pack.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -43,6 +51,8 @@ func (c *client) Submit(fn string, data []byte) (job.Job, error) {
 	if _, err := io.Copy(c.conn, bytes.NewBuffer(b)); err != nil {
 		return nil, err
 	}
+	pj := &partialJob{data: data, warnings: warnings}
+	c.partialJobs <- pj
 	return <-c.newJobs, nil
 }
 
@@ -83,13 +93,14 @@ func (c *client) routePackets() {
 		handle := string(pack.Arguments[0])
 		if pack.Type == packet.JobCreated {
 			packets := make(chan *packet.Packet)
-			j := job.New(handle, packets)
+			pj := <-c.partialJobs
+			j := job.New(handle, pj.data, pj.warnings, packets)
 			c.addJob(handle, packets)
 			c.newJobs <- j
 			go func() {
 				defer close(packets)
 				defer c.deleteJob(handle)
-				_ = j.Run()
+				j.Run()
 			}()
 		} else {
 			c.getJob(handle) <- pack

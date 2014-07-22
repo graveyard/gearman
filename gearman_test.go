@@ -23,8 +23,9 @@ func mockClient() *client {
 		conn:    &bufferCloser{},
 		packets: make(chan *packet.Packet),
 		// Add buffers to prevent blocking in test cases
-		newJobs: make(chan job.Job, 10),
-		jobs:    make(map[string]chan *packet.Packet, 10),
+		newJobs:     make(chan job.Job, 10),
+		jobs:        make(map[string]chan *packet.Packet, 10),
+		partialJobs: make(chan *partialJob, 10),
 	}
 	go c.routePackets()
 	return c
@@ -33,9 +34,9 @@ func mockClient() *client {
 func TestSubmit(t *testing.T) {
 	c := mockClient()
 	buf := c.conn.(*bufferCloser)
-	expected := job.New("the_handle", make(chan *packet.Packet))
+	expected := job.New("the_handle", nil, nil, make(chan *packet.Packet))
 	c.newJobs <- expected
-	j, err := c.Submit("my_function", []byte("my data"))
+	j, err := c.Submit("my_function", []byte("my data"), nil, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, j, expected)
 	expectedPacket := &packet.Packet{
@@ -61,6 +62,7 @@ func handlePacket(handle string, kind int, arguments [][]byte) *packet.Packet {
 
 func TestJobCreated(t *testing.T) {
 	c := mockClient()
+	c.partialJobs <- &partialJob{nil, nil}
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	var j job.Job

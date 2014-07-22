@@ -11,12 +11,10 @@
 type Job interface {
 	// The handle of the job
 	Handle() string
-	// Data returns a channel of work data sent by the job
-	// NOTE: If you don't listen to this channel, you will block parsing of new Gearman packets
-	Data() <-chan []byte
-	// Warnings returns a channel of warnings sent by the job
-	// NOTE: If you don't listen to this channel, you will block parsing of new Gearman packets
-	Warnings() <-chan []byte
+	// Data returns an io.Reader of all the bytes sent as work data
+	Data() io.Reader
+	// Warnings returns an io.Reader of all the bytes sent as work warnings
+	Warnings() io.Reader
 	// Status returns the current status of the gearman job
 	Status() Status
 	// Blocks until the job completes. Returns the state, Completed or Failed.
@@ -29,11 +27,13 @@ Job represents a Gearman job
 #### func  New
 
 ```go
-func New(handle string, packets chan *packet.Packet) Job
+func New(handle string, data, warnings io.ReadWriter, packets chan *packet.Packet) Job
 ```
 New creates a new Gearman job with the specified handle, updating the job based
 on the packets in the packets channel. The only packets coming down packets
-should be packets for this job.
+should be packets for this job. Optionally, you can pass in custom
+io.ReadWriters if you want to control where the data and warnings packets get
+buffered. By default they're buffered internally.
 
 #### type State
 
