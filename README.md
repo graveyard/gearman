@@ -15,6 +15,7 @@ from that job:
     import(
     	"github.com/Clever/gearman"
     	"github.com/Clever/gearman/job"
+    	"ioutil"
     )
 
     func main() {
@@ -23,16 +24,17 @@ from that job:
     		panic(err)
     	}
 
-    	j, err := client.Submit("reverse", []byte("hello world!"))
+    	j, err := client.Submit("reverse", []byte("hello world!"), nil, nil)
     	if err != nil {
     		panic(err)
     	}
-    	// Warnings are impossible for this worker, so we don't need to listen for warnings.
-    	// If they were and we didn't listen for warnings, we would block parsing from the server.
-    	for data := range j.Data() {
-    		println(data) // !dlrow olleh
+    	state := j.Run()
+    	println(state) // job.Completed
+    	data, err := ioutil.ReadAll(j.Data())
+    	if err != nil {
+    		panic(err)
     	}
-    	println(j.State()) // job.State.Completed
+    	println(data) // !dlrow olleh
     }
 
 ## Usage
