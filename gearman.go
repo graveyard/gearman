@@ -119,10 +119,11 @@ func NewClient(network, addr string) (Client, error) {
 		return nil, err
 	}
 	c := &client{
-		conn:    conn,
-		packets: make(chan *packet.Packet),
-		newJobs: make(chan job.Job),
-		jobs:    make(map[string]chan *packet.Packet),
+		conn:        conn,
+		packets:     make(chan *packet.Packet),
+		newJobs:     make(chan job.Job),
+		partialJobs: make(chan *partialJob),
+		jobs:        make(map[string]chan *packet.Packet),
 	}
 	go c.read(scanner.New(conn))
 
