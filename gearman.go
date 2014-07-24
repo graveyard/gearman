@@ -43,7 +43,11 @@ func (c *client) Close() error {
 }
 
 func (c *client) Submit(fn string, payload []byte, data, warnings io.ReadWriter) (job.Job, error) {
-	pack := &packet.Packet{Code: packet.Req, Type: packet.SubmitJob, Arguments: [][]byte{[]byte(fn), []byte{}, payload}}
+	pack := &packet.Packet{
+		Code:      packet.Req,
+		Type:      packet.SubmitJob,
+		Arguments: [][]byte{[]byte(fn), []byte{}, payload},
+	}
 	b, err := pack.MarshalBinary()
 	if err != nil {
 		return nil, err
