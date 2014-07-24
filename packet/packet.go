@@ -12,7 +12,7 @@ var (
 	// Req is the code for a Request packet
 	Req = packetCode([]byte{0, byte('R'), byte('E'), byte('Q')})
 	// Res is the code for a Response packet
-	Res = packetCode([]byte{0, byte('R'), byte('E'), byte('Q')})
+	Res = packetCode([]byte{0, byte('R'), byte('E'), byte('S')})
 )
 
 // Packet contains a Gearman packet. See http://gearman.org/protocol/
