@@ -7,15 +7,10 @@ import (
 	"github.com/Clever/gearman/job"
 	"github.com/Clever/gearman/packet"
 	"github.com/Clever/gearman/scanner"
-	"github.com/Clever/gearman/utils"
 	"io"
 	"net"
 	"sync"
 )
-
-// Buffer is an alias for a bytes.Buffer that satisfies the ReadWriteCloser interface by providing a
-// no-op Close method.
-type Buffer utils.Buffer
 
 // Client is a Gearman client
 type Client interface {

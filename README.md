@@ -39,15 +39,6 @@ from that job:
 
 ## Usage
 
-#### type Buffer
-
-```go
-type Buffer utils.Buffer
-```
-
-Buffer is an alias for a bytes.Buffer that satisfies the ReadWriteCloser
-interface by providing a no-op Close method.
-
 #### type Client
 
 ```go
