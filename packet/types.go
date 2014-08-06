@@ -1,11 +1,11 @@
 package packet
 
-// PacketType represents the type of the Gearman packet
-type PacketType int
+// Type represents the type of the Gearman packet
+type Type int
 
 const (
 	// SubmitJob = SUBMIT_JOB
-	SubmitJob PacketType = 7
+	SubmitJob Type = 7
 	// JobCreated = JOB_CREATED
 	JobCreated = 8
 	// WorkStatus = WORK_STATUS

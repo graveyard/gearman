@@ -20,7 +20,7 @@ type Packet struct {
 	// The Code for the packet: either \0REQ or \0RES
 	Code packetCode
 	// The Type of the packet, e.g. WorkStatus
-	Type PacketType
+	Type Type
 	// The Arguments of the packet
 	Arguments [][]byte
 }
@@ -31,7 +31,7 @@ func (packet *Packet) UnmarshalBinary(data []byte) error {
 	if err := binary.Read(bytes.NewBuffer(data[4:8]), binary.BigEndian, &kind); err != nil {
 		return err
 	}
-	packet.Type = PacketType(kind)
+	packet.Type = Type(kind)
 	arguments := [][]byte{}
 	if len(data) > 12 {
 		arguments = bytes.Split(data[12:len(data)], []byte{0})

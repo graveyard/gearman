@@ -10,7 +10,7 @@ var (
 	// Req is the code for a Request packet
 	Req = packetCode([]byte{0, byte('R'), byte('E'), byte('Q')})
 	// Res is the code for a Response packet
-	Res = packetCode([]byte{0, byte('R'), byte('E'), byte('Q')})
+	Res = packetCode([]byte{0, byte('R'), byte('E'), byte('S')})
 )
 ```
 
@@ -21,7 +21,7 @@ type Packet struct {
 	// The Code for the packet: either \0REQ or \0RES
 	Code packetCode
 	// The Type of the packet, e.g. WorkStatus
-	Type PacketType
+	Type Type
 	// The Arguments of the packet
 	Arguments [][]byte
 }
@@ -43,18 +43,18 @@ func (packet *Packet) UnmarshalBinary(data []byte) error
 ```
 UnmarshalBinary implements the encoding.BinaryUnmarshaler interface
 
-#### type PacketType
+#### type Type
 
 ```go
-type PacketType int
+type Type int
 ```
 
-PacketType represents the type of the Gearman packet
+Type represents the type of the Gearman packet
 
 ```go
 const (
 	// SubmitJob = SUBMIT_JOB
-	SubmitJob PacketType = 7
+	SubmitJob Type = 7
 	// JobCreated = JOB_CREATED
 	JobCreated = 8
 	// WorkStatus = WORK_STATUS

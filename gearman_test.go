@@ -55,7 +55,7 @@ func handlePacket(handle string, kind int, arguments [][]byte) *packet.Packet {
 	}
 	arguments = append([][]byte{[]byte(handle)}, arguments...)
 	return &packet.Packet{
-		Type:      packet.PacketType(kind),
+		Type:      packet.Type(kind),
 		Arguments: arguments,
 	}
 }
