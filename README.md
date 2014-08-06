@@ -39,16 +39,24 @@ from that job:
 
 ## Usage
 
+#### type Buffer
+
+```go
+type Buffer utils.Buffer
+```
+
+Buffer is an alias for a bytes.Buffer that satisfies the ReadWriteCloser
+interface by providing a no-op Close method.
+
 #### type Client
 
 ```go
 type Client interface {
 	// Closes the connection to the server
 	Close() error
-	// Submits a new job to the server with the specified function and payload.
-	// You can optionally provide custom ReadWriters for work data and warnings to be written to.
-	// Otherwise, it's buffered internally in the returned Job.
-	Submit(fn string, payload []byte, data, warnings io.ReadWriter) (job.Job, error)
+	// Submits a new job to the server with the specified function and payload. You must provide two
+	// WriteClosers for data and warnings to be written to.
+	Submit(fn string, payload []byte, data, warnings io.WriteCloser) (job.Job, error)
 }
 ```
 

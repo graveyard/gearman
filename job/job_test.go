@@ -2,8 +2,8 @@ package job
 
 import (
 	"github.com/Clever/gearman/packet"
+	"github.com/Clever/gearman/utils"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
 	"strconv"
 	"testing"
 )
@@ -51,15 +51,13 @@ func TestHandlePacketsStatus(t *testing.T) {
 
 func TestHandlePacketsDataWarning(t *testing.T) {
 	packets := make(chan *packet.Packet)
-	j := New("0", nil, nil, packets)
+	data := utils.NewBuffer()
+	warnings := utils.NewBuffer()
+	j := New("0", data, warnings, packets)
 	packets <- handlePacket("", packet.WorkData, [][]byte{[]byte("some data")})
 	packets <- handlePacket("", packet.WorkWarning, [][]byte{[]byte("some warning")})
 	packets <- handlePacket("", packet.WorkComplete, nil)
 	j.Run()
-	data, err := ioutil.ReadAll(j.Data())
-	assert.Nil(t, err)
-	warning, err := ioutil.ReadAll(j.Warnings())
-	assert.Nil(t, err)
-	assert.Equal(t, data, []byte("some data"))
-	assert.Equal(t, warning, []byte("some warning"))
+	assert.Equal(t, data.Bytes(), []byte("some data"))
+	assert.Equal(t, warnings.Bytes(), []byte("some warning"))
 }

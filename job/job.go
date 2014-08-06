@@ -1,7 +1,6 @@
 package job
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/Clever/gearman/packet"
 	"io"
@@ -30,10 +29,6 @@ type Status struct {
 type Job interface {
 	// The handle of the job
 	Handle() string
-	// Data returns an io.Reader of all the bytes sent as work data
-	Data() io.Reader
-	// Warnings returns an io.Reader of all the bytes sent as work warnings
-	Warnings() io.Reader
 	// Status returns the current status of the gearman job
 	Status() Status
 	// Blocks until the job completes. Returns the state, Completed or Failed.
@@ -42,7 +37,7 @@ type Job interface {
 
 type job struct {
 	handle         string
-	data, warnings io.ReadWriter
+	data, warnings io.WriteCloser
 	status         Status
 	state          State
 	done           chan struct{}
@@ -50,14 +45,6 @@ type job struct {
 
 func (j job) Handle() string {
 	return j.handle
-}
-
-func (j *job) Data() io.Reader {
-	return j.data
-}
-
-func (j *job) Warnings() io.Reader {
-	return j.warnings
 }
 
 func (j job) Status() Status {
@@ -104,15 +91,8 @@ func (j *job) handlePackets(packets chan *packet.Packet) {
 
 // New creates a new Gearman job with the specified handle, updating the job based on the packets
 // in the packets channel. The only packets coming down packets should be packets for this job.
-// Optionally, you can pass in custom io.ReadWriters if you want to control where the data and
-// warnings packets get buffered. By default they're buffered internally.
-func New(handle string, data, warnings io.ReadWriter, packets chan *packet.Packet) Job {
-	if data == nil {
-		data = bytes.NewBuffer([]byte{})
-	}
-	if warnings == nil {
-		warnings = bytes.NewBuffer([]byte{})
-	}
+// It also takes in two WriteClosers to right job data and warnings to.
+func New(handle string, data, warnings io.WriteCloser, packets chan *packet.Packet) Job {
 	j := &job{
 		handle:   handle,
 		data:     data,
