@@ -1,6 +1,6 @@
 # packet
 --
-    import "github.com/Clever/gearman/packet"
+    import "gopkg.in/Clever/gearman.v1/packet"
 
 
 ## Usage

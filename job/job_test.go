@@ -1,8 +1,8 @@
 package job
 
 import (
-	"github.com/Clever/gearman/packet"
-	"github.com/Clever/gearman/utils"
+	"gopkg.in/Clever/gearman.v1/packet"
+	"gopkg.in/Clever/gearman.v1/utils"
 	"github.com/stretchr/testify/assert"
 	"strconv"
 	"testing"

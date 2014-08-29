@@ -2,7 +2,7 @@ package scanner
 
 import (
 	"bytes"
-	"github.com/Clever/gearman/packet"
+	"gopkg.in/Clever/gearman.v1/packet"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

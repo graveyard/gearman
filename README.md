@@ -1,6 +1,6 @@
 # gearman
 --
-    import "github.com/Clever/gearman"
+    import "gopkg.in/Clever/gearman.v1"
 
 Package gearman provides a thread-safe Gearman client
 
@@ -13,8 +13,8 @@ from that job:
     package main
 
     import(
-    	"github.com/Clever/gearman"
-    	"github.com/Clever/gearman/job"
+    	"gopkg.in/Clever/gearman.v1"
+    	"gopkg.in/Clever/gearman.v1/job"
     	"ioutil"
     )
 

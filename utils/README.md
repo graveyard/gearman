@@ -1,6 +1,6 @@
 # utils
 --
-    import "github.com/Clever/gearman/utils"
+    import "gopkg.in/Clever/gearman.v1/utils"
 
 
 ## Usage

@@ -2,8 +2,8 @@ package gearman
 
 import (
 	"bytes"
-	"github.com/Clever/gearman/job"
-	"github.com/Clever/gearman/packet"
+	"gopkg.in/Clever/gearman.v1/job"
+	"gopkg.in/Clever/gearman.v1/packet"
 	"github.com/stretchr/testify/assert"
 	"strconv"
 	"sync"

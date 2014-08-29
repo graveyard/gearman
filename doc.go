@@ -8,8 +8,8 @@ Here's an example program that submits a job to Gearman and listens for events f
 	package main
 
 	import(
-		"github.com/Clever/gearman"
-		"github.com/Clever/gearman/job"
+		"gopkg.in/Clever/gearman.v1"
+		"gopkg.in/Clever/gearman.v1/job"
 		"ioutil"
 	)
 
