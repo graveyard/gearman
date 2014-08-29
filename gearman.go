@@ -53,8 +53,7 @@ func (c *client) Submit(fn string, payload []byte, data, warnings io.WriteCloser
 	if _, err := io.Copy(c.conn, bytes.NewBuffer(b)); err != nil {
 		return nil, err
 	}
-	pj := &partialJob{data: data, warnings: warnings}
-	c.partialJobs <- pj
+	c.partialJobs <- &partialJob{data: data, warnings: warnings}
 	return <-c.newJobs, nil
 }
 
