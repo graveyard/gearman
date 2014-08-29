@@ -1,6 +1,6 @@
 # scanner
 --
-    import "github.com/Clever/gearman/scanner"
+    import "gopkg.in/Clever/gearman.v1/scanner"
 
 
 ## Usage

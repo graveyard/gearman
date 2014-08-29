@@ -2,7 +2,7 @@ package job
 
 import (
 	"fmt"
-	"github.com/Clever/gearman/packet"
+	"gopkg.in/Clever/gearman.v1/packet"
 	"io"
 	"strconv"
 )

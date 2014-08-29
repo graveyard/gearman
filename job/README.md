@@ -1,6 +1,6 @@
 # job
 --
-    import "github.com/Clever/gearman/job"
+    import "gopkg.in/Clever/gearman.v1/job"
 
 
 ## Usage
