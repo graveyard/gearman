@@ -48,6 +48,7 @@ type Client interface {
 	// Submits a new job to the server with the specified function and payload. You must provide two
 	// WriteClosers for data and warnings to be written to.
 	Submit(fn string, payload []byte, data, warnings io.WriteCloser) (job.Job, error)
+	SubmitBackground(fn string, payload []byte) error
 }
 ```
 

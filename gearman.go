@@ -4,13 +4,30 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net"
+	"sync"
+
 	"gopkg.in/Clever/gearman.v1/job"
 	"gopkg.in/Clever/gearman.v1/packet"
 	"gopkg.in/Clever/gearman.v1/scanner"
-	"io"
-	"net"
-	"sync"
 )
+
+// noOpCloser is like an ioutil.NopCloser, but for an io.Writer.
+type noOpCloser struct {
+	w io.Writer
+}
+
+func (c noOpCloser) Write(data []byte) (n int, err error) {
+	return c.w.Write(data)
+}
+
+func (c noOpCloser) Close() error {
+	return nil
+}
+
+var discard = noOpCloser{w: ioutil.Discard}
 
 // Client is a Gearman client
 type Client interface {
@@ -19,6 +36,7 @@ type Client interface {
 	// Submits a new job to the server with the specified function and payload. You must provide two
 	// WriteClosers for data and warnings to be written to.
 	Submit(fn string, payload []byte, data, warnings io.WriteCloser) (job.Job, error)
+	SubmitBackground(fn string, payload []byte) error
 }
 
 type client struct {
@@ -40,10 +58,10 @@ func (c *client) Close() error {
 	return nil
 }
 
-func (c *client) Submit(fn string, payload []byte, data, warnings io.WriteCloser) (job.Job, error) {
+func (c *client) submit(fn string, payload []byte, data, warnings io.WriteCloser, t packet.Type) (job.Job, error) {
 	pack := &packet.Packet{
 		Code:      packet.Req,
-		Type:      packet.SubmitJob,
+		Type:      t,
 		Arguments: [][]byte{[]byte(fn), []byte{}, payload},
 	}
 	b, err := pack.MarshalBinary()
@@ -55,6 +73,15 @@ func (c *client) Submit(fn string, payload []byte, data, warnings io.WriteCloser
 	}
 	c.partialJobs <- &partialJob{data: data, warnings: warnings}
 	return <-c.newJobs, nil
+}
+
+func (c *client) Submit(fn string, payload []byte, data, warnings io.WriteCloser) (job.Job, error) {
+	return c.submit(fn, payload, data, warnings, packet.SubmitJob)
+}
+
+func (c *client) SubmitBackground(fn string, payload []byte) error {
+	_, err := c.submit(fn, payload, discard, discard, packet.SubmitJobBg)
+	return err
 }
 
 func (c *client) addJob(handle string, packets chan *packet.Packet) {
