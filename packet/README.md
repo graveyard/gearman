@@ -63,6 +63,8 @@ const (
 	WorkComplete = 13
 	// WorkFail = WORK_FAIL
 	WorkFail = 14
+	// SubmitJobBg = SUBMIT_JOB_BG
+	SubmitJobBg = 18
 	// WorkData = WORK_DATA
 	WorkData = 28
 	// WorkWarning = WORK_WARNING
