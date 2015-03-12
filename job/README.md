@@ -1,6 +1,6 @@
 # job
 --
-    import "gopkg.in/Clever/gearman.v1/job"
+    import "gopkg.in/Clever/gearman.v2/job"
 
 
 ## Usage
@@ -8,13 +8,7 @@
 #### type Job
 
 ```go
-type Job interface {
-	// The handle of the job
-	Handle() string
-	// Status returns the current status of the gearman job
-	Status() Status
-	// Blocks until the job completes. Returns the state, Completed or Failed.
-	Run() State
+type Job struct {
 }
 ```
 
@@ -23,12 +17,33 @@ Job represents a Gearman job
 #### func  New
 
 ```go
-func New(handle string, data, warnings io.WriteCloser, packets chan *packet.Packet) Job
+func New(handle string, data, warnings io.WriteCloser, packets chan *packet.Packet) *Job
 ```
 New creates a new Gearman job with the specified handle, updating the job based
 on the packets in the packets channel. The only packets coming down packets
 should be packets for this job. It also takes in two WriteClosers to right job
 data and warnings to.
+
+#### func (Job) Handle
+
+```go
+func (j Job) Handle() string
+```
+Handle returns job handle
+
+#### func (*Job) Run
+
+```go
+func (j *Job) Run() State
+```
+Run blocks until the job completes. Returns the state, Completed or Failed.
+
+#### func (Job) Status
+
+```go
+func (j Job) Status() Status
+```
+Status returns the current status of the gearman job
 
 #### type State
 

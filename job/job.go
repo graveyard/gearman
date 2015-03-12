@@ -2,9 +2,10 @@ package job
 
 import (
 	"fmt"
-	"gopkg.in/Clever/gearman.v1/packet"
 	"io"
 	"strconv"
+
+	"gopkg.in/Clever/gearman.v2/packet"
 )
 
 // State of a Gearman job
@@ -26,16 +27,7 @@ type Status struct {
 }
 
 // Job represents a Gearman job
-type Job interface {
-	// The handle of the job
-	Handle() string
-	// Status returns the current status of the gearman job
-	Status() Status
-	// Blocks until the job completes. Returns the state, Completed or Failed.
-	Run() State
-}
-
-type job struct {
+type Job struct {
 	handle         string
 	data, warnings io.WriteCloser
 	status         Status
@@ -43,20 +35,23 @@ type job struct {
 	done           chan struct{}
 }
 
-func (j job) Handle() string {
+// Handle returns job handle
+func (j Job) Handle() string {
 	return j.handle
 }
 
-func (j job) Status() Status {
+// Status returns the current status of the gearman job
+func (j Job) Status() Status {
 	return j.status
 }
 
-func (j *job) Run() State {
+// Run blocks until the job completes. Returns the state, Completed or Failed.
+func (j *Job) Run() State {
 	<-j.done
 	return j.state
 }
 
-func (j *job) handlePackets(packets chan *packet.Packet) {
+func (j *Job) handlePackets(packets chan *packet.Packet) {
 	for pack := range packets {
 		switch pack.Type {
 		case packet.WorkStatus:
@@ -92,8 +87,8 @@ func (j *job) handlePackets(packets chan *packet.Packet) {
 // New creates a new Gearman job with the specified handle, updating the job based on the packets
 // in the packets channel. The only packets coming down packets should be packets for this job.
 // It also takes in two WriteClosers to right job data and warnings to.
-func New(handle string, data, warnings io.WriteCloser, packets chan *packet.Packet) Job {
-	j := &job{
+func New(handle string, data, warnings io.WriteCloser, packets chan *packet.Packet) *Job {
+	j := &Job{
 		handle:   handle,
 		data:     data,
 		warnings: warnings,

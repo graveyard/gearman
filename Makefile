@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-PKG := gopkg.in/Clever/gearman.v1
+PKG := gopkg.in/Clever/gearman.v2
 SUBPKGSREL := $(shell ls -d */)
 SUBPKGS := $(addprefix $(PKG)/, $(SUBPKGSREL))
 READMES := $(addsuffix README.md, $(SUBPKGSREL))
