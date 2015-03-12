@@ -1,6 +1,6 @@
 # packet
 --
-    import "gopkg.in/Clever/gearman.v1/packet"
+    import "gopkg.in/Clever/gearman.v2/packet"
 
 
 ## Usage

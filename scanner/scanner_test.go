@@ -2,9 +2,10 @@ package scanner
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
-	"gopkg.in/Clever/gearman.v1/packet"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/Clever/gearman.v2/packet"
 )
 
 func packetWithArgs(args [][]byte) *packet.Packet {

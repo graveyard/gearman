@@ -9,9 +9,9 @@ import (
 	"net"
 	"sync"
 
-	"gopkg.in/Clever/gearman.v1/job"
-	"gopkg.in/Clever/gearman.v1/packet"
-	"gopkg.in/Clever/gearman.v1/scanner"
+	"gopkg.in/Clever/gearman.v2/job"
+	"gopkg.in/Clever/gearman.v2/packet"
+	"gopkg.in/Clever/gearman.v2/scanner"
 )
 
 // noOpCloser is like an ioutil.NopCloser, but for an io.Writer.
@@ -30,21 +30,12 @@ func (c noOpCloser) Close() error {
 var discard = noOpCloser{w: ioutil.Discard}
 
 // Client is a Gearman client
-type Client interface {
-	// Closes the connection to the server
-	Close() error
-	// Submits a new job to the server with the specified function and payload. You must provide two
-	// WriteClosers for data and warnings to be written to.
-	Submit(fn string, payload []byte, data, warnings io.WriteCloser) (job.Job, error)
-	SubmitBackground(fn string, payload []byte) error
-}
-
-type client struct {
+type Client struct {
 	conn        io.WriteCloser
 	packets     chan *packet.Packet
 	jobs        map[string]chan *packet.Packet
 	partialJobs chan *partialJob
-	newJobs     chan job.Job
+	newJobs     chan *job.Job
 	jobLock     sync.RWMutex
 }
 
@@ -52,13 +43,14 @@ type partialJob struct {
 	data, warnings io.WriteCloser
 }
 
-func (c *client) Close() error {
+// Close terminates the connection to the server
+func (c *Client) Close() error {
 	c.conn.Close()
 	// TODO: figure out when to close packet chan
 	return nil
 }
 
-func (c *client) submit(fn string, payload []byte, data, warnings io.WriteCloser, t packet.Type) (job.Job, error) {
+func (c *Client) submit(fn string, payload []byte, data, warnings io.WriteCloser, t packet.Type) (*job.Job, error) {
 	pack := &packet.Packet{
 		Code:      packet.Req,
 		Type:      t,
@@ -75,34 +67,38 @@ func (c *client) submit(fn string, payload []byte, data, warnings io.WriteCloser
 	return <-c.newJobs, nil
 }
 
-func (c *client) Submit(fn string, payload []byte, data, warnings io.WriteCloser) (job.Job, error) {
+// Submit sends a new job to the server with the specified function and payload. You must provide
+// two WriteClosers for data and warnings to be written to.
+func (c *Client) Submit(fn string, payload []byte, data, warnings io.WriteCloser) (*job.Job, error) {
 	return c.submit(fn, payload, data, warnings, packet.SubmitJob)
 }
 
-func (c *client) SubmitBackground(fn string, payload []byte) error {
+// SubmitBackground submits a background job. There is no access to data, warnings, or completion
+// state.
+func (c *Client) SubmitBackground(fn string, payload []byte) error {
 	_, err := c.submit(fn, payload, discard, discard, packet.SubmitJobBg)
 	return err
 }
 
-func (c *client) addJob(handle string, packets chan *packet.Packet) {
+func (c *Client) addJob(handle string, packets chan *packet.Packet) {
 	c.jobLock.Lock()
 	defer c.jobLock.Unlock()
 	c.jobs[handle] = packets
 }
 
-func (c *client) getJob(handle string) chan *packet.Packet {
+func (c *Client) getJob(handle string) chan *packet.Packet {
 	c.jobLock.RLock()
 	defer c.jobLock.RUnlock()
 	return c.jobs[handle]
 }
 
-func (c *client) deleteJob(handle string) {
+func (c *Client) deleteJob(handle string) {
 	c.jobLock.Lock()
 	defer c.jobLock.Unlock()
 	delete(c.jobs, handle)
 }
 
-func (c *client) read(scanner *bufio.Scanner) {
+func (c *Client) read(scanner *bufio.Scanner) {
 	for scanner.Scan() {
 		pack := &packet.Packet{}
 		if err := pack.UnmarshalBinary(scanner.Bytes()); err != nil {
@@ -116,7 +112,7 @@ func (c *client) read(scanner *bufio.Scanner) {
 	}
 }
 
-func (c *client) routePackets() {
+func (c *Client) routePackets() {
 	for pack := range c.packets {
 		handle := string(pack.Arguments[0])
 		if pack.Type == packet.JobCreated {
@@ -137,15 +133,15 @@ func (c *client) routePackets() {
 }
 
 // NewClient returns a new Gearman client pointing at the specified server
-func NewClient(network, addr string) (Client, error) {
+func NewClient(network, addr string) (*Client, error) {
 	conn, err := net.Dial(network, addr)
 	if err != nil {
 		return nil, err
 	}
-	c := &client{
+	c := &Client{
 		conn:        conn,
 		packets:     make(chan *packet.Packet),
-		newJobs:     make(chan job.Job),
+		newJobs:     make(chan *job.Job),
 		partialJobs: make(chan *partialJob),
 		jobs:        make(map[string]chan *packet.Packet),
 	}

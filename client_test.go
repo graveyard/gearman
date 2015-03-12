@@ -2,12 +2,13 @@ package gearman
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
-	"gopkg.in/Clever/gearman.v1/job"
-	"gopkg.in/Clever/gearman.v1/packet"
 	"strconv"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/Clever/gearman.v2/job"
+	"gopkg.in/Clever/gearman.v2/packet"
 )
 
 type bufferCloser struct {
@@ -18,12 +19,12 @@ func (buf *bufferCloser) Close() error {
 	return nil
 }
 
-func mockClient() *client {
-	c := &client{
+func mockClient() *Client {
+	c := &Client{
 		conn:    &bufferCloser{},
 		packets: make(chan *packet.Packet),
 		// Add buffers to prevent blocking in test cases
-		newJobs:     make(chan job.Job, 10),
+		newJobs:     make(chan *job.Job, 10),
 		jobs:        make(map[string]chan *packet.Packet, 10),
 		partialJobs: make(chan *partialJob, 10),
 	}
@@ -65,7 +66,7 @@ func TestJobCreated(t *testing.T) {
 	c.partialJobs <- &partialJob{nil, nil}
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	var j job.Job
+	var j *job.Job
 	var packets chan *packet.Packet
 	go func() {
 		defer wg.Done()
