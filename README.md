@@ -6,7 +6,7 @@ Package gearman provides a thread-safe Gearman client
 
 ### Development
 
-All imports are written with the `gopkg.in` paths so you will have a much easier time editting this package in your `$GOPATH/src/gopkg.in/gearman.v2` directory.
+All imports are written with the `gopkg.in` paths so you will have a much easier time editting this package in your `$GOPATH/src/gopkg.in/Clever/gearman.v2` directory.
 
 ### Example
 
