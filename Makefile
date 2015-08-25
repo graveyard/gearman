@@ -19,6 +19,9 @@ ifneq ($(NOLINT),1)
 	@echo "LINTING..."
 	@PATH=$(PATH):$(GOPATH)/bin golint $(GOPATH)/src/$@/*.go
 	@echo ""
+	@echo "VETTING..."
+	@PATH=$(PATH): go vet $(GOPATH)/src/$@/*.go
+	@echo ""
 endif
 ifeq ($(COVERAGE),1)
 	@go test -cover -coverprofile=$(GOPATH)/src/$@/c.out $@ -test.v

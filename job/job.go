@@ -72,11 +72,11 @@ func (j *Job) handlePackets(packets chan *packet.Packet) {
 			close(j.done)
 		case packet.WorkData:
 			if _, err := j.data.Write(pack.Arguments[1]); err != nil {
-				fmt.Printf("Error writing data", pack.Arguments[1], err)
+				fmt.Printf("Error writing data, arg: %s, err: %s", pack.Arguments[1], err)
 			}
 		case packet.WorkWarning:
 			if _, err := j.warnings.Write(pack.Arguments[1]); err != nil {
-				fmt.Printf("Error writing warnings", pack.Arguments[1], err)
+				fmt.Printf("Error writing warnings, arg: %s, err: %s", pack.Arguments[1], err)
 			}
 		default:
 			fmt.Println("WARNING: Unimplemented packet type", pack.Type)
