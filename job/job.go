@@ -20,6 +20,18 @@ const (
 	Failed
 )
 
+func (s State) String() string {
+	switch s {
+	case Running:
+		return "Running"
+	case Completed:
+		return "Completed"
+	case Failed:
+		return "Failed"
+	}
+	return "Unknown"
+}
+
 // Status of a Gearman job
 type Status struct {
 	Numerator   int

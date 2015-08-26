@@ -1,6 +1,7 @@
 package job
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -61,4 +62,9 @@ func TestHandlePacketsDataWarning(t *testing.T) {
 	j.Run()
 	assert.Equal(t, data.Bytes(), []byte("some data"))
 	assert.Equal(t, warnings.Bytes(), []byte("some warning"))
+}
+
+func TestStateStringer(t *testing.T) {
+	assert.Equal(t, "Running", fmt.Sprintf("%s", Running))
+	assert.Equal(t, "Completed", Completed.String())
 }
