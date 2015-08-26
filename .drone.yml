@@ -9,4 +9,7 @@ notify:
     on_success: false
     webhook_url: $$slack_webhook
 script:
+- mkdir -p "$GOPATH/src/gopkg.in/Clever"
+- mv "$GOPATH/src/github.com/Clever/gearman" "$GOPATH/src/gopkg.in/Clever/gearman.v2"
+- cd "$GOPATH/src/gopkg.in/Clever/gearman.v2"
 - make

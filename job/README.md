@@ -64,6 +64,12 @@ const (
 )
 ```
 
+#### func (State) String
+
+```go
+func (s State) String() string
+```
+
 #### type Status
 
 ```go
