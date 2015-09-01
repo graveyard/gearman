@@ -72,12 +72,12 @@ func (packet *Packet) MarshalBinary() ([]byte, error) {
 	// form a buffer with the packet's magic code
 	buf := bytes.NewBuffer(packet.Code)
 
-	// write the request header
+	// write the packet type
 	if err := binary.Write(buf, binary.BigEndian, int32(packet.Type)); err != nil {
 		return nil, fmt.Errorf("Error while writing packet type: %s", err)
 	}
 
-	// write the size of the packet
+	// finish the header with the size of the packet
 	size := len(packet.Arguments) - 1 // One for each null-byte separator
 	for _, argument := range packet.Arguments {
 		size += len(argument)
@@ -90,16 +90,12 @@ func (packet *Packet) MarshalBinary() ([]byte, error) {
 	}
 
 	// write all arguments provided
-	for i := 0; i < len(packet.Arguments); i++ {
-		if _, err := buf.Write(packet.Arguments[i]); err != nil {
-			return nil, fmt.Errorf("Error while writing packet argument: %s", err)
-		}
+	for i, arg := range packet.Arguments {
+		buf.Write(arg)
 
 		// null deliminate every argument but the last
-		if i == len(packet.Arguments)-1 {
-			break // last argument
-		} else if err := buf.WriteByte(0); err != nil {
-			return nil, fmt.Errorf("Error while deliminating packet argument: %s", err)
+		if i != len(packet.Arguments)-1 {
+			buf.WriteByte(0)
 		}
 	}
 	return buf.Bytes(), nil
