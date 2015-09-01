@@ -147,10 +147,13 @@ func (c *Client) routePackets() {
 			packets := make(chan *packet.Packet)
 			// optimistically hope that the last job submitted is the same one that just started
 			pj := <-c.partialJobs
-			// hook up the job to
+			// hook up the job to its packet stream
 			j := job.New(handle, pj.data, pj.warnings, packets)
+			// add the packet stream to the internal routing map
 			c.addJob(handle, packets)
+			// finally unblock the Submit() fn call
 			c.newJobs <- j
+
 			go func() {
 				defer close(packets)
 				defer c.deleteJob(handle)
@@ -162,8 +165,8 @@ func (c *Client) routePackets() {
 			if pktStream != nil {
 				pktStream <- pack
 			} else {
-				fmt.Printf("GEARMAN WARNING: packet read with handle of %s, no reference in client.!\n",
-					handle)
+				fmt.Printf("GEARMAN WARNING: packet read with handle of '%s', "+
+					"no reference found in client.!\n", handle)
 			}
 		}
 	}

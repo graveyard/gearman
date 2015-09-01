@@ -7,6 +7,9 @@ import (
 	"io"
 )
 
+// needMoreData returns the requisite values to get the bufio.Scanner to send more data to
+// the splitter.
+// http://pkg.golang.org/pkg/bufio/#SplitFunc
 func needMoreData() (int, []byte, error) { return 0, nil, nil }
 
 const headerSize = 12
