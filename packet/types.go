@@ -4,10 +4,14 @@ package packet
 type Type int
 
 const (
+	// PreSleep = PRE_SLEEP
+	PreSleep = 4
 	// SubmitJob = SUBMIT_JOB
 	SubmitJob Type = 7
 	// JobCreated = JOB_CREATED
 	JobCreated = 8
+	// JobAssign = JOB_ASSIGN
+	JobAssign = 11
 	// WorkStatus = WORK_STATUS
 	WorkStatus = 12
 	// WorkComplete = WORK_COMPLETE
