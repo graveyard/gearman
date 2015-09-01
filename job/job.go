@@ -3,6 +3,7 @@ package job
 import (
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 
 	"gopkg.in/Clever/gearman.v2/packet"
@@ -77,18 +78,18 @@ func (j *Job) handlePackets(packets <-chan *packet.Packet) {
 		case packet.WorkStatus:
 			// check that packet is valid WORK_STATUS
 			if len(pack.Arguments) != 3 {
-				fmt.Printf("GEARMAN WARNING: Recieved invalid WORK_STATUS packet with '%d' fields\n",
+				fmt.Fprintf(os.Stderr, "GEARMAN WARNING: Recieved invalid WORK_STATUS packet with '%d' fields\n",
 					len(pack.Arguments))
 				return
 			}
 
 			num, err := strconv.Atoi(string(pack.Arguments[1]))
 			if err != nil {
-				fmt.Println("GEARMAN WARNING: Error converting numerator", err)
+				fmt.Fprintln(os.Stderr, "GEARMAN WARNING: Error converting numerator", err)
 			}
 			den, err := strconv.Atoi(string(pack.Arguments[2]))
 			if err != nil {
-				fmt.Println("GEARMAN WARNING: Error converting denominator", err)
+				fmt.Fprintln(os.Stderr, "GEARMAN WARNING: Error converting denominator", err)
 			}
 			j.status = Status{Numerator: num, Denominator: den}
 		case packet.WorkComplete:
@@ -99,16 +100,16 @@ func (j *Job) handlePackets(packets <-chan *packet.Packet) {
 			close(j.done)
 		case packet.WorkData:
 			if _, err := j.data.Write(pack.Arguments[1]); err != nil {
-				fmt.Printf("GEARMAN WARNING: Error writing data, arg: %s, err: %s",
+				fmt.Fprintf(os.Stderr, "GEARMAN WARNING: Error writing data, arg: %s, err: %s",
 					pack.Arguments[1], err)
 			}
 		case packet.WorkWarning:
 			if _, err := j.warnings.Write(pack.Arguments[1]); err != nil {
-				fmt.Printf("GEARMAN WARNING: Error writing warnings, arg: %s, err: %s",
+				fmt.Fprintf(os.Stderr, "GEARMAN WARNING: Error writing warnings, arg: %s, err: %s",
 					pack.Arguments[1], err)
 			}
 		default:
-			fmt.Println("GEARMAN WARNING: Unimplemented packet type", pack.Type)
+			fmt.Fprintln(os.Stderr, "GEARMAN WARNING: Unimplemented packet type", pack.Type)
 		}
 	}
 }

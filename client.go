@@ -7,8 +7,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"os"
 	"sync"
-	"time"
 
 	"gopkg.in/Clever/gearman.v2/job"
 	"gopkg.in/Clever/gearman.v2/packet"
@@ -31,16 +31,21 @@ func (c noOpCloser) Close() error {
 var discard = noOpCloser{w: ioutil.Discard}
 
 type partialJob struct {
-	data     io.WriteCloser
+	// data is used to write data back to the caller's provided io.Writer
+	data io.WriteCloser
+	// warnings is used to write warning messages back to the caller's provided io.Writer
 	warnings io.WriteCloser
 }
 
 // Client is a Gearman client
 type Client struct {
 	// conn is the connection to the gearman server
-	conn        io.WriteCloser
-	packets     chan *packet.Packet
-	jobs        map[string]chan *packet.Packet
+	conn io.WriteCloser
+	// packets is the stream of incoming gearman packets from the server
+	packets chan *packet.Packet
+	// jobs is a router for sending packets to the correct job to interpret
+	jobs map[string]chan *packet.Packet
+	// partialJobs
 	partialJobs chan *partialJob
 	newJobs     chan *job.Job
 	jobLock     sync.RWMutex
@@ -71,14 +76,7 @@ func (c *Client) submit(fn string, payload []byte, data, warnings io.WriteCloser
 
 	// block while the client waits for confirmation that a job has been created
 	c.partialJobs <- &partialJob{data: data, warnings: warnings}
-
-	// wait for confirmation, potentially times out
-	select {
-	case j := <-c.newJobs:
-		return j, nil
-	case <-time.After(10 * time.Second):
-		return nil, fmt.Errorf("Gearman timed out after submitting the job.")
-	}
+	return <-c.newJobs, nil
 }
 
 // Submit sends a new job to the server with the specified function and payload. You must provide
@@ -121,13 +119,13 @@ func (c *Client) read(scanner *bufio.Scanner) {
 	for scanner.Scan() {
 		pack := &packet.Packet{}
 		if err := pack.UnmarshalBinary(scanner.Bytes()); err != nil {
-			fmt.Printf("GEARMAN WARNING: error parsing packet! %#v\n", err)
+			fmt.Fprintf(os.Stderr, "GEARMAN WARNING: error parsing packet! %#v\n", err)
 		} else {
 			c.packets <- pack
 		}
 	}
 	if scanner.Err() != nil {
-		fmt.Printf("GEARMAN WARNING: error scanning! %#v\n", scanner.Err())
+		fmt.Fprintf(os.Stderr, "GEARMAN WARNING: error scanning! %#v\n", scanner.Err())
 	}
 }
 
@@ -136,7 +134,7 @@ func (c *Client) routePackets() {
 	// operate on every packet that has been read
 	for pack := range c.packets {
 		if len(pack.Arguments) == 0 {
-			fmt.Println("GEARMAN WARNING: packet read with no handle!")
+			fmt.Fprintln(os.Stderr, "GEARMAN WARNING: packet read with no handle!")
 			continue
 		}
 
@@ -165,7 +163,7 @@ func (c *Client) routePackets() {
 			if pktStream != nil {
 				pktStream <- pack
 			} else {
-				fmt.Printf("GEARMAN WARNING: packet read with handle of '%s', "+
+				fmt.Fprintf(os.Stderr, "GEARMAN WARNING: packet read with handle of '%s', "+
 					"no reference found in client.!\n", handle)
 			}
 		}
