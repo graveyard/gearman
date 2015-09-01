@@ -55,8 +55,10 @@ State of a Gearman job
 
 ```go
 const (
+	// Unknown is the default 'State' that should not be encountered
+	Unknown State = iota
 	// Running means that the job has not yet finished
-	Running State = iota
+	Running
 	// Completed means that the job finished successfully
 	Completed
 	// Failed means that the job failed
@@ -69,12 +71,15 @@ const (
 ```go
 func (s State) String() string
 ```
+String implements the fmt.Stringer interface for easy printing.
 
 #### type Status
 
 ```go
 type Status struct {
-	Numerator   int
+	// Numerator is the numerator of the % complete
+	Numerator int
+	// Denominator is the denominator of the % complete
 	Denominator int
 }
 ```
