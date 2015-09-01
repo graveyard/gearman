@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net"
 	"sync"
+	"time"
 
 	"gopkg.in/Clever/gearman.v2/job"
 	"gopkg.in/Clever/gearman.v2/packet"
@@ -29,8 +30,14 @@ func (c noOpCloser) Close() error {
 
 var discard = noOpCloser{w: ioutil.Discard}
 
+type partialJob struct {
+	data     io.WriteCloser
+	warnings io.WriteCloser
+}
+
 // Client is a Gearman client
 type Client struct {
+	// conn is the connection to the gearman server
 	conn        io.WriteCloser
 	packets     chan *packet.Packet
 	jobs        map[string]chan *packet.Packet
@@ -39,32 +46,39 @@ type Client struct {
 	jobLock     sync.RWMutex
 }
 
-type partialJob struct {
-	data, warnings io.WriteCloser
-}
-
 // Close terminates the connection to the server
 func (c *Client) Close() error {
-	c.conn.Close()
 	// TODO: figure out when to close packet chan
-	return nil
+	return c.conn.Close()
 }
 
 func (c *Client) submit(fn string, payload []byte, data, warnings io.WriteCloser, t packet.Type) (*job.Job, error) {
+	// create and marshal the gearman packet
 	pack := &packet.Packet{
 		Code:      packet.Req,
 		Type:      t,
 		Arguments: [][]byte{[]byte(fn), []byte{}, payload},
 	}
-	b, err := pack.MarshalBinary()
+	buf, err := pack.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
-	if _, err := io.Copy(c.conn, bytes.NewBuffer(b)); err != nil {
+
+	// write the packet to the gearman server
+	if _, err := io.Copy(c.conn, bytes.NewBuffer(buf)); err != nil {
 		return nil, err
 	}
+
+	// block while the client waits for confirmation that a job has been created
 	c.partialJobs <- &partialJob{data: data, warnings: warnings}
-	return <-c.newJobs, nil
+
+	// wait for confirmation, potentially times out
+	select {
+	case j := <-c.newJobs:
+		return j, nil
+	case <-time.After(10 * time.Second):
+		return nil, fmt.Errorf("Gearman timed out after submitting the job.")
+	}
 }
 
 // Submit sends a new job to the server with the specified function and payload. You must provide
@@ -80,44 +94,60 @@ func (c *Client) SubmitBackground(fn string, payload []byte) error {
 	return err
 }
 
+// addJob adds the reference to a job and its packet stream to the internal map of packet streams.
 func (c *Client) addJob(handle string, packets chan *packet.Packet) {
 	c.jobLock.Lock()
 	defer c.jobLock.Unlock()
 	c.jobs[handle] = packets
 }
 
+// getJob returns the reference to channel for a specific job based off of its handle.
 func (c *Client) getJob(handle string) chan *packet.Packet {
 	c.jobLock.RLock()
 	defer c.jobLock.RUnlock()
 	return c.jobs[handle]
 }
 
+// deleteJob removes a job's packet stream from the internal map of ongoing jobs.
 func (c *Client) deleteJob(handle string) {
 	c.jobLock.Lock()
 	defer c.jobLock.Unlock()
 	delete(c.jobs, handle)
 }
 
+// read attempts to read incoming packets from the gearman server to route them to the job
+// they are intended for.
 func (c *Client) read(scanner *bufio.Scanner) {
 	for scanner.Scan() {
 		pack := &packet.Packet{}
 		if err := pack.UnmarshalBinary(scanner.Bytes()); err != nil {
-			fmt.Printf("ERROR PARSING PACKET! %#v\n", err)
+			fmt.Printf("GEARMAN WARNING: error parsing packet! %#v\n", err)
 		} else {
 			c.packets <- pack
 		}
 	}
 	if scanner.Err() != nil {
-		fmt.Printf("ERROR SCANNING! %#v\n", scanner.Err())
+		fmt.Printf("GEARMAN WARNING: error scanning! %#v\n", scanner.Err())
 	}
 }
 
+// routePackets forwards incoming packets to the correct job.
 func (c *Client) routePackets() {
+	// operate on every packet that has been read
 	for pack := range c.packets {
+		if len(pack.Arguments) == 0 {
+			fmt.Println("GEARMAN WARNING: packet read with no handle!")
+			continue
+		}
+
 		handle := string(pack.Arguments[0])
-		if pack.Type == packet.JobCreated {
+		switch pack.Type {
+		case packet.JobCreated:
+			// create a new channel to send packets for this job
 			packets := make(chan *packet.Packet)
+			// optimistically hope that the last job submitted is the same one that just started
 			pj := <-c.partialJobs
+			// hook up the job to
 			j := job.New(handle, pj.data, pj.warnings, packets)
 			c.addJob(handle, packets)
 			c.newJobs <- j
@@ -126,8 +156,15 @@ func (c *Client) routePackets() {
 				defer c.deleteJob(handle)
 				j.Run()
 			}()
-		} else {
-			c.getJob(handle) <- pack
+		default:
+			// send the packet to the right job
+			pktStream := c.getJob(handle)
+			if pktStream != nil {
+				pktStream <- pack
+			} else {
+				fmt.Printf("GEARMAN WARNING: packet read with handle of %s, no reference in client.!\n",
+					handle)
+			}
 		}
 	}
 }
@@ -136,8 +173,9 @@ func (c *Client) routePackets() {
 func NewClient(network, addr string) (*Client, error) {
 	conn, err := net.Dial(network, addr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error while establishing a connection to gearman: %s", err)
 	}
+
 	c := &Client{
 		conn:        conn,
 		packets:     make(chan *packet.Packet),
@@ -146,7 +184,6 @@ func NewClient(network, addr string) (*Client, error) {
 		jobs:        make(map[string]chan *packet.Packet),
 	}
 	go c.read(scanner.New(conn))
-
 	go c.routePackets()
 
 	return c, nil
