@@ -33,7 +33,7 @@ type Packet struct {
 func (packet *Packet) UnmarshalBinary(data []byte) error {
 	// ensure packet is of minimum length
 	if len(data) < 12 {
-		return errors.New("All gearman packets must be at least 12 bytes.")
+		return errors.New("All gearman packets must be at least 12 bytes or more.")
 	}
 
 	// determine the packet magic code
@@ -42,20 +42,20 @@ func (packet *Packet) UnmarshalBinary(data []byte) error {
 	} else if bytes.Compare(data[0:4], Res) == 0 {
 		packet.Code = Res
 	} else {
-		return fmt.Errorf("unrecognized packet code %#v", data[0:4])
+		return fmt.Errorf("Unrecognized magic packet code %#v", data[0:4])
 	}
 
 	// determine the kind of packet
 	kind := int32(0)
 	if err := binary.Read(bytes.NewBuffer(data[4:8]), binary.BigEndian, &kind); err != nil {
-		return err
+		return fmt.Errorf("Error while reading packet type: %s", err)
 	}
 	packet.Type = Type(kind)
 
 	// parse the length of the packet
 	length := int32(0)
 	if err := binary.Read(bytes.NewBuffer(data[8:12]), binary.BigEndian, &length); err != nil {
-		return err
+		return fmt.Errorf("Error while reading packet length: %s", err)
 	}
 
 	// parse the arguments into a byte array
@@ -74,7 +74,7 @@ func (packet *Packet) MarshalBinary() ([]byte, error) {
 
 	// write the request header
 	if err := binary.Write(buf, binary.BigEndian, int32(packet.Type)); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error while writing packet type: %s", err)
 	}
 
 	// write the size of the packet
@@ -86,20 +86,20 @@ func (packet *Packet) MarshalBinary() ([]byte, error) {
 
 	// write the size of the packet
 	if err := binary.Write(buf, binary.BigEndian, int32(size)); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error while writing packet length: %s", err)
 	}
 
 	// write all arguments provided
 	for i := 0; i < len(packet.Arguments); i++ {
 		if _, err := buf.Write(packet.Arguments[i]); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Error while writing packet argument: %s", err)
 		}
 
 		// null deliminate every argument but the last
 		if i == len(packet.Arguments)-1 {
 			break // last argument
 		} else if err := buf.WriteByte(0); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Error while deliminating packet argument: %s", err)
 		}
 	}
 	return buf.Bytes(), nil
