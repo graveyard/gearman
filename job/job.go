@@ -3,6 +3,7 @@ package job
 import (
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 
 	"gopkg.in/Clever/gearman.v2/packet"
@@ -12,16 +13,21 @@ import (
 type State int
 
 const (
+	// Unknown is the default 'State' that should not be encountered
+	Unknown State = iota
 	// Running means that the job has not yet finished
-	Running State = iota
+	Running
 	// Completed means that the job finished successfully
 	Completed
 	// Failed means that the job failed
 	Failed
 )
 
+// String implements the fmt.Stringer interface for easy printing.
 func (s State) String() string {
 	switch s {
+	case Unknown:
+		return "Unknown"
 	case Running:
 		return "Running"
 	case Completed:
@@ -34,7 +40,9 @@ func (s State) String() string {
 
 // Status of a Gearman job
 type Status struct {
-	Numerator   int
+	// Numerator is the numerator of the % complete
+	Numerator int
+	// Denominator is the denominator of the % complete
 	Denominator int
 }
 
@@ -63,17 +71,25 @@ func (j *Job) Run() State {
 	return j.state
 }
 
-func (j *Job) handlePackets(packets chan *packet.Packet) {
+// handlePackets updates a job based off of incoming packets associated with this job.
+func (j *Job) handlePackets(packets <-chan *packet.Packet) {
 	for pack := range packets {
 		switch pack.Type {
 		case packet.WorkStatus:
+			// check that packet is valid WORK_STATUS
+			if len(pack.Arguments) != 3 {
+				fmt.Fprintf(os.Stderr, "GEARMAN WARNING: Recieved invalid WORK_STATUS packet with '%d' fields\n",
+					len(pack.Arguments))
+				return
+			}
+
 			num, err := strconv.Atoi(string(pack.Arguments[1]))
 			if err != nil {
-				fmt.Println("Error converting numerator", err)
+				fmt.Fprintln(os.Stderr, "GEARMAN WARNING: Error converting numerator", err)
 			}
 			den, err := strconv.Atoi(string(pack.Arguments[2]))
 			if err != nil {
-				fmt.Println("Error converting denominator", err)
+				fmt.Fprintln(os.Stderr, "GEARMAN WARNING: Error converting denominator", err)
 			}
 			j.status = Status{Numerator: num, Denominator: den}
 		case packet.WorkComplete:
@@ -84,14 +100,16 @@ func (j *Job) handlePackets(packets chan *packet.Packet) {
 			close(j.done)
 		case packet.WorkData:
 			if _, err := j.data.Write(pack.Arguments[1]); err != nil {
-				fmt.Printf("Error writing data, arg: %s, err: %s", pack.Arguments[1], err)
+				fmt.Fprintf(os.Stderr, "GEARMAN WARNING: Error writing data, arg: %s, err: %s",
+					pack.Arguments[1], err)
 			}
 		case packet.WorkWarning:
 			if _, err := j.warnings.Write(pack.Arguments[1]); err != nil {
-				fmt.Printf("Error writing warnings, arg: %s, err: %s", pack.Arguments[1], err)
+				fmt.Fprintf(os.Stderr, "GEARMAN WARNING: Error writing warnings, arg: %s, err: %s",
+					pack.Arguments[1], err)
 			}
 		default:
-			fmt.Println("WARNING: Unimplemented packet type", pack.Type)
+			fmt.Fprintln(os.Stderr, "GEARMAN WARNING: Unimplemented packet type", pack.Type)
 		}
 	}
 }
@@ -104,7 +122,7 @@ func New(handle string, data, warnings io.WriteCloser, packets chan *packet.Pack
 		handle:   handle,
 		data:     data,
 		warnings: warnings,
-		status:   Status{0, 0},
+		status:   Status{},
 		state:    Running,
 		done:     make(chan struct{}),
 	}

@@ -4,9 +4,6 @@
 
 Package gearman provides a thread-safe Gearman client
 
-### Development
-
-All imports are written with the `gopkg.in` paths so you will have a much easier time editting this package in your `$GOPATH/src/gopkg.in/Clever/gearman.v2` directory.
 
 ### Example
 
@@ -79,4 +76,3 @@ func (c *Client) SubmitBackground(fn string, payload []byte) error
 ```
 SubmitBackground submits a background job. There is no access to data, warnings,
 or completion state.
-
