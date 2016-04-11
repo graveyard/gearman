@@ -1,0 +1,38 @@
+{
+	"ImportPath": "github.com/Clever/gearman",
+	"GoVersion": "go1.6",
+	"Packages": [
+		"github.com/Clever/gearman",
+		"github.com/Clever/gearman/job",
+		"github.com/Clever/gearman/packet",
+		"github.com/Clever/gearman/scanner",
+		"github.com/Clever/gearman/utils"
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/stretchr/testify/assert",
+			"Comment": "v1.0-15-gddcad49",
+			"Rev": "ddcad49ec6b8f31bc3daf3a1fbea7eac58d61ff0"
+		},
+		{
+			"ImportPath": "gopkg.in/Clever/gearman.v2/job",
+			"Comment": "v2.0.2",
+			"Rev": "d2560ca62280345c831fdce79fd9fa13e537be59"
+		},
+		{
+			"ImportPath": "gopkg.in/Clever/gearman.v2/packet",
+			"Comment": "v2.0.2",
+			"Rev": "d2560ca62280345c831fdce79fd9fa13e537be59"
+		},
+		{
+			"ImportPath": "gopkg.in/Clever/gearman.v2/scanner",
+			"Comment": "v2.0.2",
+			"Rev": "d2560ca62280345c831fdce79fd9fa13e537be59"
+		},
+		{
+			"ImportPath": "gopkg.in/Clever/gearman.v2/utils",
+			"Comment": "v2.0.2",
+			"Rev": "d2560ca62280345c831fdce79fd9fa13e537be59"
+		}
+	]
+}

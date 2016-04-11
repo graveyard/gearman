@@ -19,8 +19,12 @@ build:
 
 test: $(PKGS)
 $(PKGS): golang-test-all-deps
-			$(call golang-test-all,$@)
+			 $(call golang-test-all,$@)
 
+vendor: golang-godep-vendor-deps
+				$(call golang-godep-vendor,$(PKGS))
+
+READMES := $(addsuffix README.md, $(SUBPKGSREL))
 docs: $(READMES) README.md
 README.md: *.go
 	@go get github.com/robertkrimen/godocdown/godocdown
