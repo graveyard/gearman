@@ -1,8 +1,10 @@
 # gearman
---
+
     import "gopkg.in/Clever/gearman.v2"
 
-Package gearman provides a thread-safe Gearman client
+Package gearman provides a thread-safe Gearman client.
+
+For complete usage examples and documentation, please see [https://godoc.org/gopkg.in/Clever/gearman.v2](https://godoc.org/gopkg.in/Clever/gearman.v2).
 
 
 ### Example
