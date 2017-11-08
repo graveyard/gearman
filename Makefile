@@ -7,7 +7,7 @@ SHELL := /bin/bash
 PKG := gopkg.in/Clever/gearman.v2
 PKGS := $(shell go list ./... | grep -v vendor)
 EXECUTABLE := $(shell basename $(PKG))
-$(eval $(call golang-version-check,1.8))
+$(eval $(call golang-version-check,1.9))
 
 export GO15VENDOREXPERIMENT = 1
 
@@ -22,3 +22,7 @@ $(PKGS): golang-test-all-deps
 
 vendor: golang-godep-vendor-deps
 				$(call golang-godep-vendor,$(PKGS))
+
+
+install_deps: golang-dep-vendor-deps
+	$(call golang-dep-vendor)
