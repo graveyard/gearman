@@ -7,7 +7,7 @@ SHELL := /bin/bash
 PKG := gopkg.in/Clever/gearman.v2
 PKGS := $(shell go list ./... | grep -v vendor)
 EXECUTABLE := $(shell basename $(PKG))
-$(eval $(call golang-version-check,1.10))
+$(eval $(call golang-version-check,1.12))
 
 all: test build
 
